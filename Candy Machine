@@ -14,5 +14,8 @@ elif 0 <= quantity_required <= available_candies:
 
 else:
     print("These much are not available.")
+    
+
+available_candies = available_candies - quantity_required
 
 print("Bye")
