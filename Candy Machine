@@ -1,21 +1,187 @@
-#This is my try to build a basic candy machine.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSR Web Tool</title>
+    <style>
+        :root {
+            --primary-color: #1a73e8; --primary-light: #d6eaff; --surface-color: #ffffff;
+            --on-surface-color: #202124; --outline-color: #bdc1c6; --background-color: #f1f3f4;
+            --header-gradient: linear-gradient(to right, #1a73e8, #1e88e5);
+            --shadow-sm: 0 1px 2px 0 rgba(60, 64, 67, .3); --shadow-md: 0 4px 8px 2px rgba(60, 64, 67, .15);
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 30px;
+            background-color: var(--background-color); color: var(--on-surface-color);
+            display: flex; justify-content: center;
+        }
+        .app-container {
+            width: 100%; max-width: 1200px; background-color: var(--surface-color);
+            border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden;
+        }
+        .header {
+            background: var(--header-gradient); padding: 18px 30px; display: flex;
+            justify-content: space-between; align-items: center; color: white;
+        }
+        .header-title { font-size: 1.6em; font-weight: 500; }
+        .header-info { text-align: right; }
+        .date-picker-container label { font-size: 0.9em; margin-right: 10px; font-weight: 500; }
+        #report_date { padding: 8px; border-radius: 4px; border: 1px solid var(--outline-color); background-color: var(--surface-color); }
+        .main-content { padding: 0 30px 30px 30px; }
+        .tab-bar { border-bottom: 1px solid #dadce0; display: flex; margin-bottom: 30px; }
+        .tab-button {
+            padding: 16px 24px; cursor: pointer; border: none; background-color: transparent;
+            font-size: 1.1em; font-weight: 500; color: #5f6368; border-bottom: 3px solid transparent;
+            margin-bottom: -1px; transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+        }
+        .tab-button:hover { background-color: var(--primary-light); color: var(--primary-color); }
+        .tab-button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        fieldset { border: 1px solid #dadce0; border-radius: 12px; padding: 30px; background-color: #fafafa; }
+        legend { font-size: 1.5em; font-weight: 500; padding: 0 10px; color: #3c4043; }
+        .form-group { margin-bottom: 24px; }
+        .form-row { display: flex; gap: 40px; }
+        label { display: block; margin-bottom: 8px; font-size: 0.9em; font-weight: 500; color: #5f6368; }
+        input[type="text"], select, textarea {
+            width: 100%; padding: 14px; font-size: 1em; border: 1px solid var(--outline-color);
+            border-radius: 8px; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: var(--surface-color); font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+        }
+        input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); }
+        .primary-button {
+            font-size: 1em; font-weight: 500; padding: 12px 28px; cursor: pointer; background-color: var(--primary-color);
+            color: white; border: none; border-radius: 24px; transition: transform 0.1s ease-out, box-shadow 0.2s ease-out;
+            box-shadow: var(--shadow-sm);
+        }
+        .primary-button:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+        .secondary-button {
+            font-size: 1em; font-weight: 500; padding: 10px 24px; cursor: pointer; background-color: transparent;
+            color: var(--primary-color); border: 1px solid var(--primary-color); border-radius: 24px;
+            transition: background-color 0.2s, color 0.2s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .secondary-button:hover { background-color: var(--primary-light); }
+        .secondary-button svg { width: 18px; height: 18px; fill: currentColor; }
+        .results-output { margin-top: 30px; }
+        .table-container { width: 100%; overflow-x: auto; border: 1px solid #dadce0; border-radius: 8px; }
+        .results-table { width: 100%; border-collapse: collapse; font-size: 0.9em; text-align: left; white-space: nowrap; }
+        .results-table th, .results-table td { padding: 10px 14px; border-bottom: 1px solid #dadce0; border-right: 1px solid #dadce0; }
+        .results-table thead th { background-color: #f1f3f4; font-weight: 600; position: sticky; top: 0; z-index: 2; }
+        .results-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
+        .results-table th:nth-child(1), .results-table td:nth-child(1) { position: sticky; left: 0px; z-index: 1; }
+        .results-table th:nth-child(2), .results-table td:nth-child(2) { position: sticky; left: 100px; z-index: 1; }
+        .results-table th:nth-child(3), .results-table td:nth-child(3) { position: sticky; left: 250px; z-index: 1; }
+        .results-table thead th:nth-child(1), .results-table thead th:nth-child(2), .results-table thead th:nth-child(3) { background-color: #e8eaed; }
+        .results-table tbody td:nth-child(1), .results-table tbody td:nth-child(2), .results-table tbody td:nth-child(3) { background-color: var(--surface-color); }
+        .results-table tbody tr:nth-child(even) td:nth-child(1), .results-table tbody tr:nth-child(even) td:nth-child(2), .results-table tbody tr:nth-child(even) td:nth-child(3) { background-color: #f8f9fa; }
+        pre {
+            background: #e8eaed; padding: 16px; border-radius: 8px; white-space: pre-wrap;
+            word-wrap: break-word; border: 1px solid #dadce0; font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95em; max-height: 400px; overflow-y: auto;
+        }
+        .collapsible-trigger {
+            background-color: var(--surface-color); color: #3c4043; cursor: pointer; padding: 16px 20px;
+            width: 100%; border: 1px solid #dadce0; text-align: left; outline: none;
+            font-size: 1.1em; font-weight: 500; border-radius: 8px; display: flex;
+            justify-content: space-between; align-items: center; transition: background-color 0.2s, box-shadow 0.2s;
+            margin-bottom: 8px; box-shadow: var(--shadow-sm);
+        }
+        .collapsible-trigger:hover { background-color: #f8f9fa; box-shadow: 0 1px 3px 1px rgba(60, 64, 67, .15); }
+        .collapsible-trigger .arrow { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 1.5em; color: #5f6368; }
+        .collapsible-trigger.active .arrow { transform: rotate(180deg); }
+        .collapsible-content {
+            max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: var(--surface-color); border: 1px solid #dadce0; border-top: none;
+            border-radius: 0 0 8px 8px; margin-top: -8px; padding: 0;
+        }
+        .collapsible-content div { padding: 16px; }
+    </style>
+</head>
+<body>
 
-quantity_required = int(input("How many candies you want?\n"))
-#here you need to enter how many candies you want.
+    <div class="app-container">
+        <header class="header">
+            <div class="header-title">TSR Web Tool</div>
+            <div class="header-info">
+                <div class="date-picker-container">
+                    <label for="report_date">Report Date:</label>
+                    <input type="date" id="report_date" name="report_date" value="{{ request_form.get('report_date', [''])[0] }}">
+                </div>
+            </div>
+        </header>
 
-available_candies = 50
- 
-if quantity_required == 0:
-    print("Please enter any number.")
+        <main class="main-content">
+            <div class="tab-bar">
+                <button class="tab-button" data-tab="sraMonitoring">SRA Feed Monitoring</button>
+                <button class="tab-button" data-tab="adjustmentMonitoring">Adjustment Monitoring</button>
+                <button class="tab-button" data-tab="weights">Weights</button>
+                <button class="tab-button" data-tab="mqtVar">MQT VaR Figures</button>
+                <button class="tab-button" data-tab="exclusionCheck">Exclusion Check</button>
+            </div>
+            
+            <!-- ... (All your tab content and forms go here, they remain the same) ... -->
+            
+        </main>
+    </div>
 
-elif 0 <= quantity_required <= available_candies:    
-    for i in range (1, quantity_required + 1):
-        print(i)
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const tabButtons = document.querySelectorAll(".tab-button");
+            const tabContents = document.querySelectorAll(".tab-content");
+            const dateInput = document.getElementById('report_date');
 
-else:
-    print("These much are not available.")
-    
+            function activateTab(tabName) {
+                tabButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tabName));
+                tabContents.forEach(content => content.classList.toggle("active", content.id === tabName));
+            }
 
-available_candies = available_candies - quantity_required
+            tabButtons.forEach(button => {
+                button.addEventListener("click", () => {
+                    const tabName = button.dataset.tab;
+                    sessionStorage.setItem('activeTab', tabName);
+                    activateTab(tabName);
+                });
+            });
 
-print("Bye")
+            const savedTab = sessionStorage.getItem('activeTab') || 'sraMonitoring';
+            activateTab(savedTab);
+
+            const getPreviousBusinessDay = () => {
+                const date = new Date();
+                date.setDate(date.getDate() - 1);
+                while (date.getDay() === 0 || date.getDay() === 6) { date.setDate(date.getDate() - 1); }
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            if (!dateInput.value) {
+                dateInput.value = getPreviousBusinessDay();
+            }
+
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', () => {
+                    const activeTabInput = document.createElement('input');
+                    activeTabInput.type = 'hidden';
+                    activeTabInput.name = 'active_tab';
+                    activeTabInput.value = sessionStorage.getItem('activeTab') || 'sraMonitoring';
+                    form.appendChild(activeTabInput);
+
+                    if (!form.querySelector('input[name="report_date"]')) {
+                        const hiddenDateInput = document.createElement('input');
+                        hiddenDateInput.type = 'hidden';
+                        hiddenDateInput.name = 'report_date';
+                        hiddenDateInput.value = dateInput.value;
+                        form.appendChild(hiddenDateInput);
+                    }
+                });
+            });
+
+            // ... (Your existing collapsible and download logic) ...
+        });
+    </script>
+</body>
+</html>
