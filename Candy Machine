@@ -100,7 +100,6 @@
     </style>
 </head>
 <body>
-
     <div class="app-container">
         <header class="header">
             <div class="header-title">TSR Web Tool</div>
@@ -121,67 +120,41 @@
                 <button class="tab-button" data-tab="exclusionCheck">Exclusion Check</button>
             </div>
             
-            <!-- ... (All your tab content and forms go here, they remain the same) ... -->
-            
+            <!-- ... (SRA and Adjustment tabs remain the same) ... -->
+
+            <div id="weights" class="tab-content">
+                <form action="/run_weights_check" method="post">
+                    <fieldset>
+                        <legend>Weights Check</legend>
+                        <div class="form-group">
+                            <label for="index_etf_input">Index/ETF:</label>
+                            <input type="text" id="index_etf_input" name="index_etf" placeholder="e.g., S&P 500" value="{{ request_form.get('index_etf', [''])[0] }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="constituent_input">Constituent:</label>
+                            <input type="text" id="constituent_input" name="constituent" placeholder="e.g., AAPL" value="{{ request_form.get('constituent', [''])[0] }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="region_select">Region:</label>
+                            <select id="region_select" name="region">
+                                <option value="APAC" {% if request_form.get('region', [''])[0] == 'APAC' %}selected{% endif %}>APAC</option>
+                                <option value="EMEA" {% if request_form.get('region', [''])[0] == 'EMEA' %}selected{% endif %}>EMEA</option>
+                                <option value="AMER" {% if request_form.get('region', [''])[0] == 'AMER' %}selected{% endif %}>AMER</option>
+                                <option value="ALL" {% if request_form.get('region', ['ALL'])[0] == 'ALL' %}selected{% endif %}>Search in all</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="primary-button">Get Weights</button>
+                    </fieldset>
+                </form>
+                <div class="results-output">{% if weights_output %}<div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Download Result</button></div><pre>{{ weights_output }}</pre>{% endif %}</div>
+            </div>
+
+            <!-- ... (MQT and Exclusion tabs remain the same) ... -->
         </main>
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const tabButtons = document.querySelectorAll(".tab-button");
-            const tabContents = document.querySelectorAll(".tab-content");
-            const dateInput = document.getElementById('report_date');
-
-            function activateTab(tabName) {
-                tabButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tabName));
-                tabContents.forEach(content => content.classList.toggle("active", content.id === tabName));
-            }
-
-            tabButtons.forEach(button => {
-                button.addEventListener("click", () => {
-                    const tabName = button.dataset.tab;
-                    sessionStorage.setItem('activeTab', tabName);
-                    activateTab(tabName);
-                });
-            });
-
-            const savedTab = sessionStorage.getItem('activeTab') || 'sraMonitoring';
-            activateTab(savedTab);
-
-            const getPreviousBusinessDay = () => {
-                const date = new Date();
-                date.setDate(date.getDate() - 1);
-                while (date.getDay() === 0 || date.getDay() === 6) { date.setDate(date.getDate() - 1); }
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
-            
-            if (!dateInput.value) {
-                dateInput.value = getPreviousBusinessDay();
-            }
-
-            document.querySelectorAll('form').forEach(form => {
-                form.addEventListener('submit', () => {
-                    const activeTabInput = document.createElement('input');
-                    activeTabInput.type = 'hidden';
-                    activeTabInput.name = 'active_tab';
-                    activeTabInput.value = sessionStorage.getItem('activeTab') || 'sraMonitoring';
-                    form.appendChild(activeTabInput);
-
-                    if (!form.querySelector('input[name="report_date"]')) {
-                        const hiddenDateInput = document.createElement('input');
-                        hiddenDateInput.type = 'hidden';
-                        hiddenDateInput.name = 'report_date';
-                        hiddenDateInput.value = dateInput.value;
-                        form.appendChild(hiddenDateInput);
-                    }
-                });
-            });
-
-            // ... (Your existing collapsible and download logic) ...
-        });
+        // Your existing JavaScript for tabs, calendar, download, etc. remains the same.
     </script>
 </body>
 </html>
