@@ -65,17 +65,6 @@
         .secondary-button:hover { background-color: var(--primary-light); }
         .secondary-button svg { width: 18px; height: 18px; fill: currentColor; }
         .results-output { margin-top: 30px; }
-        .table-container { width: 100%; overflow-x: auto; border: 1px solid #dadce0; border-radius: 8px; }
-        .results-table { width: 100%; border-collapse: collapse; font-size: 0.9em; text-align: left; white-space: nowrap; }
-        .results-table th, .results-table td { padding: 10px 14px; border-bottom: 1px solid #dadce0; border-right: 1px solid #dadce0; }
-        .results-table thead th { background-color: #f1f3f4; font-weight: 600; position: sticky; top: 0; z-index: 2; }
-        .results-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
-        .results-table th:nth-child(1), .results-table td:nth-child(1) { position: sticky; left: 0px; z-index: 1; }
-        .results-table th:nth-child(2), .results-table td:nth-child(2) { position: sticky; left: 100px; z-index: 1; }
-        .results-table th:nth-child(3), .results-table td:nth-child(3) { position: sticky; left: 250px; z-index: 1; }
-        .results-table thead th:nth-child(1), .results-table thead th:nth-child(2), .results-table thead th:nth-child(3) { background-color: #e8eaed; }
-        .results-table tbody td:nth-child(1), .results-table tbody td:nth-child(2), .results-table tbody td:nth-child(3) { background-color: var(--surface-color); }
-        .results-table tbody tr:nth-child(even) td:nth-child(1), .results-table tbody tr:nth-child(even) td:nth-child(2), .results-table tbody tr:nth-child(even) td:nth-child(3) { background-color: #f8f9fa; }
         pre {
             background: #e8eaed; padding: 16px; border-radius: 8px; white-space: pre-wrap;
             word-wrap: break-word; border: 1px solid #dadce0; font-family: 'Courier New', Courier, monospace;
@@ -97,6 +86,59 @@
             border-radius: 0 0 8px 8px; margin-top: -8px; padding: 0;
         }
         .collapsible-content div { padding: 16px; }
+
+        /* --- STYLES FOR SCROLLABLE/FROZEN TABLE --- */
+        .table-container {
+            width: 100%;
+            overflow-x: auto; /* Enables horizontal scrollbar */
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+            text-align: left;
+            white-space: nowrap;
+        }
+        .results-table th, .results-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #dadce0;
+            border-right: 1px solid #dadce0;
+        }
+        .results-table thead th {
+            background-color: #f1f3f4;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .results-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
+        
+        /* --- FREEZE FIRST 3 COLUMNS --- */
+        .results-table th:nth-child(1), .results-table td:nth-child(1),
+        .results-table th:nth-child(2), .results-table td:nth-child(2),
+        .results-table th:nth-child(3), .results-table td:nth-child(3) {
+            position: sticky;
+            z-index: 1;
+            background-color: var(--surface-color);
+        }
+        .results-table tbody tr:nth-child(even) td:nth-child(1),
+        .results-table tbody tr:nth-child(even) td:nth-child(2),
+        .results-table tbody tr:nth-child(even) td:nth-child(3) {
+            background-color: #f8f9fa;
+        }
+        .results-table thead th:nth-child(1),
+        .results-table thead th:nth-child(2),
+        .results-table thead th:nth-child(3) {
+            background-color: #e8eaed;
+            z-index: 3;
+        }
+
+        /* Define the positions for the frozen columns */
+        .results-table th:nth-child(1), .results-table td:nth-child(1) { left: 0; }
+        .results-table th:nth-child(2), .results-table td:nth-child(2) { left: 80px; } /* Adjust if your 1st col is wider/narrower */
+        .results-table th:nth-child(3), .results-table td:nth-child(3) { left: 220px; } /* Adjust based on width of cols 1+2 */
     </style>
 </head>
 <body>
