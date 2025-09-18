@@ -1,293 +1,126 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TSR Web Tool</title>
-    <style>
-        :root {
-            --primary-color: #1a73e8; --primary-light: #d6eaff; --surface-color: #ffffff;
-            --on-surface-color: #202124; --outline-color: #bdc1c6; --background-color: #f1f3f4;
-            --header-gradient: linear-gradient(to right, #1a73e8, #1e88e5);
-            --shadow-sm: 0 1px 2px 0 rgba(60, 64, 67, .3); --shadow-md: 0 4px 8px 2px rgba(60, 64, 67, .15);
-        }
-        body {
-            font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 30px;
-            background-color: var(--background-color); color: var(--on-surface-color);
-            display: flex; justify-content: center;
-        }
-        .app-container {
-            width: 100%; max-width: 1200px; background-color: var(--surface-color);
-            border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden;
-        }
-        .header {
-            background: var(--header-gradient); padding: 18px 30px; display: flex;
-            justify-content: space-between; align-items: center; color: white;
-        }
-        .header-title { font-size: 1.6em; font-weight: 500; }
-        .header-info { text-align: right; }
-        .date-picker-container label { font-size: 0.9em; margin-right: 10px; font-weight: 500; }
-        #report_date { padding: 8px; border-radius: 4px; border: 1px solid var(--outline-color); background-color: var(--surface-color); }
-        .main-content { padding: 0 30px 30px 30px; }
-        .tab-bar { border-bottom: 1px solid #dadce0; display: flex; margin-bottom: 30px; }
-        .tab-button {
-            padding: 16px 24px; cursor: pointer; border: none; background-color: transparent;
-            font-size: 1.1em; font-weight: 500; color: #5f6368; border-bottom: 3px solid transparent;
-            margin-bottom: -1px; transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
-        }
-        .tab-button:hover { background-color: var(--primary-light); color: var(--primary-color); }
-        .tab-button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.5s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        fieldset { border: 1px solid #dadce0; border-radius: 12px; padding: 30px; background-color: #fafafa; }
-        legend { font-size: 1.5em; font-weight: 500; padding: 0 10px; color: #3c4043; }
-        .form-group { margin-bottom: 24px; }
-        .form-row { display: flex; gap: 40px; }
-        label { display: block; margin-bottom: 8px; font-size: 0.9em; font-weight: 500; color: #5f6368; }
-        input[type="text"], select, textarea {
-            width: 100%; padding: 14px; font-size: 1em; border: 1px solid var(--outline-color);
-            border-radius: 8px; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
-            background-color: var(--surface-color); font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-        }
-        input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); }
-        .primary-button {
-            font-size: 1em; font-weight: 500; padding: 12px 28px; cursor: pointer; background-color: var(--primary-color);
-            color: white; border: none; border-radius: 24px; transition: transform 0.1s ease-out, box-shadow 0.2s ease-out;
-            box-shadow: var(--shadow-sm);
-        }
-        .primary-button:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
-        .secondary-button {
-            font-size: 1em; font-weight: 500; padding: 10px 24px; cursor: pointer; background-color: transparent;
-            color: var(--primary-color); border: 1px solid var(--primary-color); border-radius: 24px;
-            transition: background-color 0.2s, color 0.2s; display: inline-flex; align-items: center; gap: 8px;
-        }
-        .secondary-button:hover { background-color: var(--primary-light); }
-        .secondary-button svg { width: 18px; height: 18px; fill: currentColor; }
-        .results-output { margin-top: 30px; }
-        pre {
-            background: #e8eaed; padding: 16px; border-radius: 8px; white-space: pre-wrap;
-            word-wrap: break-word; border: 1px solid #dadce0; font-family: 'Courier New', Courier, monospace;
-            font-size: 0.95em; max-height: 400px; overflow-y: auto;
-        }
-        .collapsible-trigger {
-            background-color: var(--surface-color); color: #3c4043; cursor: pointer; padding: 16px 20px;
-            width: 100%; border: 1px solid #dadce0; text-align: left; outline: none;
-            font-size: 1.1em; font-weight: 500; border-radius: 8px; display: flex;
-            justify-content: space-between; align-items: center; transition: background-color 0.2s, box-shadow 0.2s;
-            margin-bottom: 8px; box-shadow: var(--shadow-sm);
-        }
-        .collapsible-trigger:hover { background-color: #f8f9fa; box-shadow: 0 1px 3px 1px rgba(60, 64, 67, .15); }
-        .collapsible-trigger .arrow { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 1.5em; color: #5f6368; }
-        .collapsible-trigger.active .arrow { transform: rotate(180deg); }
-        .collapsible-content {
-            max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background-color: var(--surface-color); border: 1px solid #dadce0; border-top: none;
-            border-radius: 0 0 8px 8px; margin-top: -8px; padding: 0;
-        }
-        .collapsible-content div { padding: 16px; }
+import pandas as pd
+import os
+import glob
+import difflib
+from datetime import datetime
 
-        /* --- STYLES FOR SCROLLABLE/FROZEN TABLE --- */
-        .table-container {
-            width: 100%;
-            overflow-x: auto; /* Enables horizontal scrollbar */
-            border: 1px solid #dadce0;
-            border-radius: 8px;
-        }
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9em;
-            text-align: left;
-            white-space: nowrap;
-        }
-        .results-table th, .results-table td {
-            padding: 10px 14px;
-            border-bottom: 1px solid #dadce0;
-            border-right: 1px solid #dadce0;
-        }
-        .results-table thead th {
-            background-color: #f1f3f4;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 2;
-        }
-        .results-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
+def _read_regional_data(region, report_date, file_path, messages):
+    """
+    Helper function to read and combine regional CSV files.
+    Returns a single DataFrame and any notification messages.
+    """
+    date_yyyymmdd = datetime.strptime(report_date, "%Y-%m-%d").strftime("%Y%m%d")
+    
+    regions_to_check = []
+    if region == 'ALL':
+        regions_to_check = ['APAC', 'EMEA', 'AMER']
+    else:
+        regions_to_check = [region]
+
+    all_dfs = []
+    for reg in regions_to_check:
+        search_pattern = os.path.join(file_path, f"{reg}_{date_yyyymmdd}*.csv")
+        found_files = glob.glob(search_pattern)
+
+        if not found_files:
+            messages.append(f"INFO: No files found for region '{reg}' with pattern '{reg}_{date_yyyymmdd}*.csv'")
+            continue
+
+        found_files.sort(key=os.path.getmtime, reverse=True)
+        latest_file = found_files[0]
         
-        /* --- FREEZE FIRST 3 COLUMNS --- */
-        .results-table th:nth-child(1), .results-table td:nth-child(1),
-        .results-table th:nth-child(2), .results-table td:nth-child(2),
-        .results-table th:nth-child(3), .results-table td:nth-child(3) {
-            position: sticky;
-            z-index: 1;
-            background-color: var(--surface-color);
-        }
-        .results-table tbody tr:nth-child(even) td:nth-child(1),
-        .results-table tbody tr:nth-child(even) td:nth-child(2),
-        .results-table tbody tr:nth-child(even) td:nth-child(3) {
-            background-color: #f8f9fa;
-        }
-        .results-table thead th:nth-child(1),
-        .results-table thead th:nth-child(2),
-        .results-table thead th:nth-child(3) {
-            background-color: #e8eaed;
-            z-index: 3;
-        }
+        messages.append(f"INFO: Reading latest file for region '{reg}': {os.path.basename(latest_file)}")
+        if len(found_files) > 1:
+            messages.append(f"WARNING: Found {len(found_files)} matching files for '{reg}'. Using the newest one.")
+            messages.append("  All files found:")
+            for f in found_files:
+                messages.append(f"  - {os.path.basename(f)}")
+        
+        try:
+            df = pd.read_csv(latest_file)
+            # Add a 'Region' column to know where the data came from
+            df['Region'] = reg 
+            all_dfs.append(df)
+        except Exception as e:
+            messages.append(f"ERROR: Could not read file {os.path.basename(latest_file)}. Reason: {e}")
 
-        /* Define the positions for the frozen columns */
-        .results-table th:nth-child(1), .results-table td:nth-child(1) { left: 0; }
-        .results-table th:nth-child(2), .results-table td:nth-child(2) { left: 80px; } /* Adjust if your 1st col is wider/narrower */
-        .results-table th:nth-child(3), .results-table td:nth-child(3) { left: 220px; } /* Adjust based on width of cols 1+2 */
-    </style>
-</head>
-<body>
-    <div class="app-container">
-        <header class="header">
-            <div class="header-title">TSR Web Tool</div>
-            <div class="header-info">
-                <div class="date-picker-container">
-                    <label for="report_date">Report Date:</label>
-                    <input type="date" id="report_date" name="report_date" value="{{ request_form.get('report_date', [''])[0] }}">
-                </div>
-            </div>
-        </header>
+    if not all_dfs:
+        return pd.DataFrame()
 
-        <main class="main-content">
-            <div class="tab-bar">
-                <button class="tab-button" data-tab="sraMonitoring">SRA Feed Monitoring</button>
-                <button class="tab-button" data-tab="adjustmentMonitoring">Adjustment Monitoring</button>
-                <button class="tab-button" data-tab="weights">Weights</button>
-                <button class="tab-button" data-tab="mqtVar">MQT VaR Figures</button>
-                <button class="tab-button" data-tab="exclusionCheck">Exclusion Check</button>
-            </div>
+    return pd.concat(all_dfs, ignore_index=True)
+
+
+def run_weights_check(index_etf, constituent, region, report_date):
+    """
+    Performs a flexible search for index and constituent weights based on user input.
+    """
+    output_messages = []
+    # --- IMPORTANT: Change this to the actual path where your CSV files are stored ---
+    file_path = "C:\\path\\to\\your\\data\\folder"
+    
+    # Ensure inputs are strings to prevent errors
+    index_etf = str(index_etf).strip() if index_etf else ""
+    constituent = str(constituent).strip() if constituent else ""
+    
+    df = _read_regional_data(region, report_date, file_path, output_messages)
+
+    if df.empty:
+        output_messages.append("\nERROR: No data loaded. Please check file paths and dates.")
+        return "\n".join(output_messages)
+
+    # --- NEW LOGIC: Handle the 3 different search scenarios ---
+
+    # Scenario 1: Both Index and Constituent are provided
+    if index_etf and constituent:
+        output_messages.append(f"\nSearching for Constituent '{constituent}' within Index '{index_etf}'...")
+        result_df = df[
+            (df['Index'].str.contains(index_etf, case=False, na=False)) &
+            (df['Constituent'].str.contains(constituent, case=False, na=False))
+        ]
+        if not result_df.empty:
+            output_messages.append("\n--- Found Match ---")
+            output_messages.append(result_df[['Region', 'Index', 'Constituent', 'Weight']].to_string(index=False))
+        else:
+            output_messages.append(f"\n--- No Match Found ---")
+            output_messages.append(f"Could not find constituent '{constituent}' in index '{index_etf}'.")
+
+    # Scenario 2: Only Index is provided
+    elif index_etf:
+        output_messages.append(f"\nListing all constituents for Index matching '{index_etf}'...")
+        result_df = df[df['Index'].str.contains(index_etf, case=False, na=False)]
+        if not result_df.empty:
+            output_messages.append("\n--- Found Constituents ---")
+            output_messages.append(result_df[['Region', 'Constituent', 'Weight']].to_string(index=False))
+        else:
+            output_messages.append(f"\n--- No Match Found ---")
+            output_messages.append(f"Could not find any index matching '{index_etf}'.")
             
-            <div id="sraMonitoring" class="tab-content">
-                <form action="/run_sra_monitoring" method="post"><fieldset><legend>SRA Feed Monitoring</legend><div class="form-group"><label>Select Asset Class:</label><div class="radio-group"><label><input type="radio" name="asset_class" value="Equities" {% if request_form.get('asset_class', ['Equities'])[0] == 'Equities' %}checked{% endif %}> Equities</label><label><input type="radio" name="asset_class" value="Credit" {% if request_form.get('asset_class', [''])[0] == 'Credit' %}checked{% endif %}> Credit</label><label><input type="radio" name="asset_class" value="SP" {% if request_form.get('asset_class', [''])[0] == 'SP' %}checked{% endif %}> SP</label></div></div><button type="submit" class="primary-button">Run SRA Monitoring</button></fieldset></form>
-                <div class="results-output">{% if sra_output %}<div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Download Result</button></div><pre>{{ sra_output }}</pre>{% endif %}</div>
-            </div>
+    # Scenario 3: Only Constituent is provided
+    elif constituent:
+        output_messages.append(f"\nSearching for all index memberships for Constituent '{constituent}'...")
+        result_df = df[df['Constituent'].str.contains(constituent, case=False, na=False)]
+        if not result_df.empty:
+            output_messages.append("\n--- Found Memberships ---")
+            output_messages.append(result_df[['Region', 'Index', 'Weight']].to_string(index=False))
+        else:
+            output_messages.append(f"\n--- No Match Found ---")
+            output_messages.append(f"Could not find any constituent matching '{constituent}'.")
 
-            <div id="adjustmentMonitoring" class="tab-content">
-                <form action="/run_adjustment_monitoring" method="post"><fieldset><legend>Adjustment Monitoring</legend><div class="form-group"><label for="adj_id_input">Adjustment ID:</label><input type="text" id="adj_id_input" name="adjustment_id" placeholder="e.g., ADJ-54321" value="{{ request_form.get('adjustment_id', [''])[0] }}"></div><button type="submit" class="primary-button">Run Adjustment Monitoring</button></fieldset></form>
-                <div class="results-output">{% if adjustment_output %}<div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Download Result</button></div><pre>{{ adjustment_output }}</pre>{% endif %}</div>
-            </div>
+    # Scenario 4: No input provided
+    else:
+        output_messages.append("\n--- No Input ---")
+        output_messages.append("Please provide an Index/ETF, a Constituent, or both to search.")
 
-            <div id="weights" class="tab-content">
-                <form action="/run_weights_check" method="post"><fieldset><legend>Weights Check</legend><div class="form-group"><label for="index_etf_input">Index/ETF:</label><input type="text" id="index_etf_input" name="index_etf" placeholder="e.g., S&P 500" value="{{ request_form.get('index_etf', [''])[0] }}"></div><div class="form-group"><label for="constituent_input">Constituent:</label><input type="text" id="constituent_input" name="constituent" placeholder="e.g., AAPL" value="{{ request_form.get('constituent', [''])[0] }}"></div><div class="form-group"><label for="region_select">Region:</label><select id="region_select" name="region"><option value="APAC" {% if request_form.get('region', [''])[0] == 'APAC' %}selected{% endif %}>APAC</option><option value="EMEA" {% if request_form.get('region', [''])[0] == 'EMEA' %}selected{% endif %}>EMEA</option><option value="AMER" {% if request_form.get('region', [''])[0] == 'AMER' %}selected{% endif %}>AMER</option><option value="ALL" {% if request_form.get('region', ['ALL'])[0] == 'ALL' %}selected{% endif %}>Search in all</option></select></div><button type="submit" class="primary-button">Get Weights</button></fieldset></form>
-                <div class="results-output">{% if weights_output %}<div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Download Result</button></div><pre>{{ weights_output }}</pre>{% endif %}</div>
-            </div>
+    return "\n".join(output_messages)
 
-            <div id="mqtVar" class="tab-content">
-                <form action="/run_var_figures" method="post"><fieldset><legend>MQT VaR Figures</legend><div class="form-group"><label for="node_input">Node:</label><input type="text" id="node_input" name="node" placeholder="e.g., NODE123" value="{{ request_form.get('node', [''])[0] }}"></div><div class="form-row"><div class="form-group"><label>Select VaR Type(s):</label><div class="checkbox-group"><label><input type="checkbox" name="var_type" value="DVaR" {% if 'DVaR' in request_form.get('var_type', []) %}checked{% endif %}> DVaR</label><label><input type="checkbox" name="var_type" value="SVaR" {% if 'SVaR' in request_form.get('var_type', []) %}checked{% endif %}> SVaR</label></div></div><div class="form-group"><label>Confidence Interval:</label><div class="radio-group"><label><input type="radio" name="confidence_interval" value="95" {% if request_form.get('confidence_interval', ['95'])[0] == '95' %}checked{% endif %}> 95%</label><label><input type="radio" name="confidence_interval" value="99" {% if request_form.get('confidence_interval', [''])[0] == '99' %}checked{% endif %}> 99%</label></div></div></div><button type="submit" class="primary-button">Get VaR Figures</button></fieldset></form>
-                <div class="results-output">{% if mqt_output %}<div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Download Result</button></div>{% if mqt_output.dvar_result %}<div class="collapsible"><button type="button" class="collapsible-trigger"><span>DVaR Result</span><span class="arrow">▼</span></button><div class="collapsible-content"><div class="table-container">{{ mqt_output.dvar_result | safe }}</div></div></div>{% endif %}{% if mqt_output.svar_result %}<div class="collapsible"><button type="button" class="collapsible-trigger"><span>SVaR Result</span><span class="arrow">▼</span></button><div class="collapsible-content"><div class="table-container">{{ mqt_output.svar_result | safe }}</div></div></div>{% endif %}{% endif %}</div>
-            </div>
-            
-            <div id="exclusionCheck" class="tab-content">
-                <form action="/run_exclusion_check" method="post"><fieldset><legend>Exclusion Check</legend><div class="form-group"><label for="feed_input">Feed:</label><input type="text" id="feed_input" name="feed" placeholder="e.g., REUTERS_FEED" value="{{ request_form.get('feed', [''])[0] }}"></div><div class="form-group"><label for="book_input">Book:</label><input type="text" id="book_input" name="book" placeholder="e.g., EQUITY_BOOK_1" value="{{ request_form.get('book', [''])[0] }}"></div><button type="submit" class="primary-button">Run Exclusion Check</button></fieldset></form>
-                <div class="results-output">{% if exclusion_output %}<div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Download Result</button></div><pre>{{ exclusion_output }}</pre>{% endif %}</div>
-            </div>
-        </main>
-    </div>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const tabButtons = document.querySelectorAll(".tab-button");
-            const tabContents = document.querySelectorAll(".tab-content");
-            const dateInput = document.getElementById('report_date');
-
-            function activateTab(tabName) {
-                tabButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tabName));
-                tabContents.forEach(content => content.classList.toggle("active", content.id === tabName));
-            }
-
-            tabButtons.forEach(button => {
-                button.addEventListener("click", () => {
-                    const tabName = button.dataset.tab;
-                    sessionStorage.setItem('activeTab', tabName);
-                    activateTab(tabName);
-                });
-            });
-
-            const savedTab = sessionStorage.getItem('activeTab') || 'sraMonitoring';
-            activateTab(savedTab);
-
-            const getPreviousBusinessDay = () => {
-                const date = new Date();
-                date.setDate(date.getDate() - 1);
-                while (date.getDay() === 0 || date.getDay() === 6) { date.setDate(date.getDate() - 1); }
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
-            
-            if (!dateInput.value) {
-                dateInput.value = getPreviousBusinessDay();
-            }
-
-            document.querySelectorAll('form').forEach(form => {
-                form.addEventListener('submit', () => {
-                    const activeTabInput = document.createElement('input');
-                    activeTabInput.type = 'hidden';
-                    activeTabInput.name = 'active_tab';
-                    activeTabInput.value = sessionStorage.getItem('activeTab') || 'sraMonitoring';
-                    form.appendChild(activeTabInput);
-
-                    if (!form.querySelector('input[name="report_date"]')) {
-                        const hiddenDateInput = document.createElement('input');
-                        hiddenDateInput.type = 'hidden';
-                        hiddenDateInput.name = 'report_date';
-                        hiddenDateInput.value = dateInput.value;
-                        form.appendChild(hiddenDateInput);
-                    }
-                });
-            });
-
-            document.querySelector('.main-content').addEventListener('click', function(event) {
-                const trigger = event.target.closest('.collapsible-trigger');
-                if (trigger) {
-                    trigger.classList.toggle("active");
-                    const content = trigger.nextElementSibling;
-                    if (content.style.maxHeight) {
-                        content.style.maxHeight = null;
-                    } else {
-                        content.style.maxHeight = content.querySelector('div').scrollHeight + "px";
-                    }
-                }
-                const downloadBtn = event.target.closest('.download-btn');
-                if (downloadBtn) {
-                    let csvContent = "";
-                    const resultContainer = downloadBtn.closest('.results-output');
-                    const escapeCsvCell = (cell) => {
-                        if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
-                            return `"${cell.replace(/"/g, '""')}"`;
-                        }
-                        return cell;
-                    };
-                    if (resultContainer.querySelector('.collapsible-trigger')) {
-                        let rows = [["Result Type", "Details"]];
-                        resultContainer.querySelectorAll('.collapsible').forEach(coll => {
-                            const title = coll.querySelector('.collapsible-trigger span').textContent.trim();
-                            const content = coll.querySelector('.collapsible-content div').innerHTML;
-                            rows.push([escapeCsvCell(title), escapeCsvCell(content)]);
-                        });
-                        csvContent = rows.map(e => e.join(",")).join("\n");
-                    } else {
-                        const preElement = resultContainer.querySelector('pre');
-                        if (preElement) {
-                           csvContent = escapeCsvCell(preElement.textContent.trim());
-                        }
-                    }
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `TSR_Result_${new Date().toISOString().split('T')[0]}.csv`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-            });
-        });
-    </script>
-</body>
-</html>
+# This block allows you to test the script directly
+if __name__ == '__main__':
+    # You would need to create dummy CSV files in the specified path for this to work
+    print("--- Testing Scenario 1 (Both) ---")
+    print(run_weights_check("S&P 500", "AAPL", "AMER", "2025-09-18"))
+    
+    print("\n--- Testing Scenario 2 (Index Only) ---")
+    print(run_weights_check("S&P 500", "", "AMER", "2025-09-18"))
+    
+    print("\n--- Testing Scenario 3 (Constituent Only) ---")
+    print(run_weights_check("", "AAPL", "ALL", "2025-09-18"))
