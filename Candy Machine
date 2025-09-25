@@ -107,8 +107,7 @@
         }
         .table-container { 
             width: 100%; height: 65vh;
-            overflow: auto; /* This enables both vertical and horizontal scrollbars when needed */
-            border-radius: 8px; 
+            overflow: auto; border-radius: 8px; 
         }
         .results-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9em; text-align: left; white-space: nowrap; }
         .results-table th, .results-table td { padding: 10px 14px; border-bottom: 1px solid #dadce0; border-right: 1px solid #dadce0; }
@@ -147,11 +146,153 @@
                  <button class="tab-button" data-tab="riskFactor">Risk Factor</button>
             </div>
             
-            <div id="sraMonitoring" class="tab-content"><!-- ... SRA content ... --></div>
-            <div id="adjustmentMonitoring" class="tab-content"><!-- ... Adjustment content ... --></div>
-            <div id="weights" class="tab-content"><!-- ... Weights content ... --></div>
-            <div id="mqtVar" class="tab-content"><!-- ... MQT VaR content ... --></div>
-            <div id="exclusionCheck" class="tab-content"><!-- ... Exclusion Check content ... --></div>
+            <div id="sraMonitoring" class="tab-content">
+                 <form action="/run_sra_monitoring" method="post">
+                    <fieldset>
+                        <legend>Select Asset Class</legend>
+                        <div class="form-group radio-group">
+                            <label><input type="radio" name="asset_class" value="Equities" {% if request_form.get('asset_class', ['Equities'])[0] == 'Equities' %}checked{% endif %}> Equities</label>
+                            <label><input type="radio" name="asset_class" value="Credit" {% if request_form.get('asset_class', [''])[0] == 'Credit' %}checked{% endif %}> Credit</label>
+                            <label><input type="radio" name="asset_class" value="SP" {% if request_form.get('asset_class', [''])[0] == 'SP' %}checked{% endif %}> SP</label>
+                        </div>
+                        <button type="submit" class="primary-button">Run Monitoring</button>
+                    </fieldset>
+                 </form>
+                 <div class="results-output" id="sraMonitoringResult">
+                    {% if sra_output %}
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
+                        <pre>{{ sra_output }}</pre>
+                    {% endif %}
+                 </div>
+            </div>
+
+            <div id="adjustmentMonitoring" class="tab-content">
+                <form action="/run_adjustment_monitoring" method="post">
+                    <fieldset>
+                        <legend>Check Adjustment</legend>
+                        <div class="form-group">
+                            <label for="adjustment_id">Adjustment ID:</label>
+                            <input type="text" id="adjustment_id" name="adjustment_id" placeholder="e.g., ADJ-54321" value="{{ request_form.get('adjustment_id', [''])[0] }}">
+                        </div>
+                        <button type="submit" class="primary-button">Check Adjustment</button>
+                    </fieldset>
+                </form>
+                <div class="results-output" id="adjustmentMonitoringResult">
+                   {% if adjustment_output %}
+                       <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
+                       <pre>{{ adjustment_output }}</pre>
+                   {% endif %}
+                </div>
+            </div>
+
+            <div id="weights" class="tab-content">
+                <form action="/run_weights_check" method="post">
+                    <fieldset>
+                        <legend>Check Weights</legend>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="index_etf">Index/ETF:</label>
+                                <input type="text" id="index_etf" name="index_etf" placeholder="e.g., S&P 500" value="{{ request_form.get('index_etf', [''])[0] }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="constituent">Constituent:</label>
+                                <input type="text" id="constituent" name="constituent" placeholder="e.g., AAPL" value="{{ request_form.get('constituent', [''])[0] }}">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="region">Region:</label>
+                            <select id="region" name="region">
+                                <option value="APAC" {% if request_form.get('region', [''])[0] == 'APAC' %}selected{% endif %}>APAC</option>
+                                <option value="EMEA" {% if request_form.get('region', [''])[0] == 'EMEA' %}selected{% endif %}>EMEA</option>
+                                <option value="AMER" {% if request_form.get('region', [''])[0] == 'AMER' %}selected{% endif %}>AMER</option>
+                                <option value="ALL" {% if request_form.get('region', ['ALL'])[0] == 'ALL' %}selected{% endif %}>Search in all</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="primary-button">Check Weights</button>
+                    </fieldset>
+                </form>
+                <div class="results-output" id="weightsResult">
+                   {% if weights_output %}
+                       <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
+                       <pre>{{ weights_output }}</pre>
+                   {% endif %}
+                </div>
+            </div>
+            
+            <div id="mqtVar" class="tab-content">
+                 <form action="/run_var_figures" method="post">
+                    <fieldset>
+                        <legend>Get MQT VaR Figures</legend>
+                        <div class="form-group">
+                            <label for="node">Node:</label>
+                            <input type="text" id="node" name="node" placeholder="e.g., 180216" value="{{ request_form.get('node', [''])[0] }}">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group checkbox-group">
+                                <label>VaR Type:</label>
+                                <label><input type="checkbox" name="var_type" value="DVaR" {% if 'DVaR' in request_form.get('var_type', []) %}checked{% endif %}> DVaR</label>
+                                <label><input type="checkbox" name="var_type" value="SVaR" {% if 'SVaR' in request_form.get('var_type', []) %}checked{% endif %}> SVaR</label>
+                            </div>
+                            <div class="form-group radio-group">
+                                <label>Confidence Interval:</label>
+                                <label><input type="radio" name="confidence_interval" value="95" {% if request_form.get('confidence_interval', ['99'])[0] == '95' %}checked{% endif %}> 95%</label>
+                                <label><input type="radio" name="confidence_interval" value="99" {% if request_form.get('confidence_interval', ['99'])[0] == '99' %}checked{% endif %}> 99%</label>
+                            </div>
+                        </div>
+                        <button type="submit" class="primary-button">Get VaR Figures</button>
+                    </fieldset>
+                 </form>
+                 <div class="results-output" id="mqtVarResult">
+                    {% if mqt_output %}
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
+                        {% if mqt_output.dvar_result %}
+                        <div class="collapsible">
+                            <button type="button" class="collapsible-trigger"><span>DVaR Result</span><span class="arrow">▼</span></button>
+                            <div class="collapsible-content">
+                                <div class="table-container">
+                                    {{ mqt_output.dvar_result | safe }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if mqt_output.svar_result %}
+                        <div class="collapsible">
+                             <button type="button" class="collapsible-trigger"><span>SVaR Result</span><span class="arrow">▼</span></button>
+                            <div class="collapsible-content">
+                                <div class="table-container">
+                                    {{ mqt_output.svar_result | safe }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                 </div>
+            </div>
+
+            <div id="exclusionCheck" class="tab-content">
+                 <form action="/run_exclusion_check" method="post">
+                    <fieldset>
+                        <legend>Run Exclusion Check</legend>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="feed">Feed:</label>
+                                <input type="text" id="feed" name="feed" placeholder="e.g., REUTERS_FEED" value="{{ request_form.get('feed', [''])[0] }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="book">Book:</label>
+                                <input type="text" id="book" name="book" placeholder="e.g., EQUITY_BOOK_1" value="{{ request_form.get('book', [''])[0] }}">
+                            </div>
+                        </div>
+                        <button type="submit" class="primary-button">Run Check</button>
+                    </fieldset>
+                 </form>
+                 <div class="results-output" id="exclusionCheckResult">
+                   {% if exclusion_output %}
+                       <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
+                       <pre>{{ exclusion_output }}</pre>
+                   {% endif %}
+                 </div>
+            </div>
 
             <div id="riskFactor" class="tab-content">
                 <fieldset>
@@ -162,25 +303,80 @@
                         <button class="sub-tab-button" data-subtab="sraPnl">SRA PnL mapping</button>
                     </div>
 
-                    <!-- All sub-tab forms go here -->
-                    <div id="staticInfo" class="sub-tab-content"><!-- Static Info Form --></div>
-                    <div id="atlasProxy" class="sub-tab-content"><!-- Atlas Proxy Form --></div>
-                    <div id="sraPnl" class="sub-tab-content"><!-- SRA PnL Form --></div>
+                    <div id="staticInfo" class="sub-tab-content">
+                        <form action="/run_static_info" method="post">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="id_type">ID Type:</label>
+                                    <select id="id_type" name="id_type">
+                                        <option value="Asset Control ID" {% if request_form.get('id_type', [''])[0] == 'Asset Control ID' %}selected{% endif %}>Asset Control ID</option>
+                                        <option value="RIC" {% if request_form.get('id_type', [''])[0] == 'RIC' %}selected{% endif %}>RIC</option>
+                                        <option value="Sedol" {% if request_form.get('id_type', [''])[0] == 'Sedol' %}selected{% endif %}>Sedol</option>
+                                        <option value="Bloomberg" {% if request_form.get('id_type', [''])[0] == 'Bloomberg' %}selected{% endif %}>Bloomberg</option>
+                                        <option value="CUSIP" {% if request_form.get('id_type', [''])[0] == 'CUSIP' %}selected{% endif %}>CUSIP</option>
+                                        <option value="MARS" {% if request_form.get('id_type', [''])[0] == 'MARS' %}selected{% endif %}>MARS</option>
+                                        <option value="ESMP" {% if request_form.get('id_type', [''])[0] == 'ESMP' %}selected{% endif %}>ESMP</option>
+                                        <option value="ALL" {% if request_form.get('id_type', ['ALL'])[0] == 'ALL' %}selected{% endif %}>Search in all</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_code">Code:</label>
+                                    <input type="text" id="id_code" name="id_code" placeholder="Enter corresponding code" value="{{ request_form.get('id_code', [''])[0] }}">
+                                </div>
+                            </div>
+                            <button type="submit" class="primary-button">Get Static Info</button>
+                        </form>
+                    </div>
 
+                    <div id="atlasProxy" class="sub-tab-content">
+                        <form action="/run_atlas_proxy" method="post">
+                             <div class="form-row">
+                                <div class="form-group">
+                                    <label for="atlas_rf_type">Proxy Type:</label>
+                                    <select id="atlas_rf_type" name="atlas_rf_type">
+                                        <option value="RF which is proxied" {% if request_form.get('atlas_rf_type', [''])[0] == 'RF which is proxied' %}selected{% endif %}>RF which is proxied</option>
+                                        <option value="RF on which proxied" {% if request_form.get('atlas_rf_type', [''])[0] == 'RF on which proxied' %}selected{% endif %}>RF on which proxied</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="atlas_rf_code">Code:</label>
+                                    <input type="text" id="atlas_rf_code" name="atlas_rf_code" placeholder="Enter corresponding code" value="{{ request_form.get('atlas_rf_code', [''])[0] }}">
+                                </div>
+                            </div>
+                            <button type="submit" class="primary-button">Get Atlas Proxy</button>
+                        </form>
+                    </div>
+                    
+                    <div id="sraPnl" class="sub-tab-content">
+                        <form action="/run_sra_pnl" method="post">
+                             <div class="form-row">
+                                <div class="form-group">
+                                    <label for="sra_id_type">Identifier Type:</label>
+                                    <select id="sra_id_type" name="sra_id_type">
+                                        <option value="Asset Identifier" {% if request_form.get('sra_id_type', [''])[0] == 'Asset Identifier' %}selected{% endif %}>Asset Identifier</option>
+                                        <option value="AssetId" {% if request_form.get('sra_id_type', [''])[0] == 'AssetId' %}selected{% endif %}>AssetId</option>
+                                        <option value="AssetControlId" {% if request_form.get('sra_id_type', [''])[0] == 'AssetControlId' %}selected{% endif %}>AssetControlId</option>
+                                        <option value="Country" {% if request_form.get('sra_id_type', [''])[0] == 'Country' %}selected{% endif %}>Country</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sra_id_code">Code:</label>
+                                    <input type="text" id="sra_id_code" name="sra_id_code" placeholder="Enter corresponding code" value="{{ request_form.get('sra_id_code', [''])[0] }}">
+                                </div>
+                            </div>
+                            <button type="submit" class="primary-button">Get PnL Mapping</button>
+                        </form>
+                    </div>
                 </fieldset>
-                 
-                 <!-- THE FIX: This results area now uses the scrollable table container -->
                  <div class="results-output" id="riskFactorResult">
                     {% if risk_factor_output %}
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <h2>Results:</h2>
                         <button type="button" class="secondary-button download-btn">Download Result</button>
                     </div>
-                    
                     <div class="table-container">
                         {{ risk_factor_output | safe }}
                     </div>
-
                     {% endif %}
                 </div>
             </div>
@@ -188,7 +384,107 @@
     </div>
 
     <script>
-        // All JavaScript remains the same
+        document.addEventListener("DOMContentLoaded", () => {
+            const datePicker = document.getElementById('report_date');
+            if (!datePicker.value) {
+                const today = new Date();
+                let prevBusinessDay = new Date(today);
+                if (today.getDay() === 0) { prevBusinessDay.setDate(today.getDate() - 2); }
+                else if (today.getDay() === 1) { prevBusinessDay.setDate(today.getDate() - 3); }
+                else { prevBusinessDay.setDate(today.getDate() - 1); }
+                datePicker.value = prevBusinessDay.toISOString().split('T')[0];
+            }
+            
+            const allForms = document.querySelectorAll('form');
+            allForms.forEach(form => {
+                form.addEventListener('submit', (e) => {
+                    let dateInput = form.querySelector('input[name="report_date"]');
+                    if (!dateInput) {
+                        dateInput = document.createElement('input');
+                        dateInput.type = 'hidden'; dateInput.name = 'report_date';
+                        form.appendChild(dateInput);
+                    }
+                    dateInput.value = document.getElementById('report_date').value;
+                });
+            });
+
+            function setupTabs(containerSelector, buttonClass, contentClass, storageKey, defaultTab) {
+                const buttons = document.querySelectorAll(`${containerSelector} .${buttonClass}`);
+                const contents = document.querySelectorAll(`${containerSelector} .${contentClass}`);
+                const dataAttribute = buttonClass.includes('sub') ? 'subtab' : 'tab';
+                
+                function activate(name) {
+                    if (!name) return;
+                    buttons.forEach(btn => btn.classList.toggle("active", btn.dataset[dataAttribute] === name));
+                    contents.forEach(content => content.classList.toggle("active", content.id === name));
+                }
+
+                buttons.forEach(button => {
+                    button.addEventListener("click", () => {
+                        const name = button.dataset[dataAttribute];
+                        sessionStorage.setItem(storageKey, name);
+                        activate(name);
+                    });
+                });
+                
+                const savedValue = sessionStorage.getItem(storageKey) || defaultTab;
+                activate(savedValue);
+            }
+
+            setupTabs('.app-container', 'tab-button', 'tab-content', 'activeTab', 'sraMonitoring');
+            setupTabs('#riskFactor', 'sub-tab-button', 'sub-tab-content', 'activeSubTab', 'staticInfo');
+            
+            document.querySelectorAll('.collapsible-trigger').forEach(button => {
+                button.addEventListener('click', () => {
+                    button.classList.toggle('active');
+                    const content = button.nextElementSibling;
+                    content.classList.toggle('active');
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = "70vh"; 
+                    }
+                });
+            });
+
+            document.querySelectorAll('.download-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const resultsOutput = e.target.closest('.results-output');
+                    let data = '';
+                    let filename = 'results.csv';
+
+                    const preElement = resultsOutput.querySelector('pre');
+                    const tableElement = resultsOutput.querySelector('.results-table');
+                    
+                    if (tableElement) {
+                        const rows = tableElement.querySelectorAll('tr');
+                        const csv = [];
+                        rows.forEach(row => {
+                            const rowData = [];
+                            row.querySelectorAll('th, td').forEach(cell => {
+                                rowData.push(`"${cell.innerText.replace(/"/g, '""')}"`);
+                            });
+                            csv.push(rowData.join(','));
+                        });
+                        data = csv.join('\n');
+                    } else if (preElement) {
+                        data = `"${preElement.innerText.replace(/"/g, '""')}"`;
+                    }
+
+                    if (!data) { return; }
+
+                    const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', filename);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            });
+        });
     </script>
 </body>
 </html>
