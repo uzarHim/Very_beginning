@@ -1,96 +1,195 @@
-import pandas as pd
-import pyodbc
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSR Web Tool</title>
+    <style>
+        :root {
+            --primary-color: #1a73e8; --primary-light: #d6eaff; --surface-color: #ffffff;
+            --on-surface-color: #202124; --outline-color: #bdc1c6; --background-color: #f1f3f4;
+            --header-gradient: linear-gradient(to right, #1a73e8, #1e88e5);
+            --shadow-sm: 0 1px 2px 0 rgba(60, 64, 67, .3); --shadow-md: 0 4px 8px 2px rgba(60, 64, 67, .15);
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 30px;
+            background-color: var(--background-color); color: var(--on-surface-color);
+            display: flex; justify-content: center;
+        }
+        .app-container {
+            width: 100%; max-width: 1400px; background-color: var(--surface-color);
+            border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden;
+        }
+        .header {
+            background: var(--header-gradient); padding: 18px 30px; display: flex;
+            justify-content: space-between; align-items: center; color: white;
+        }
+        .header-title { font-size: 1.6em; font-weight: 500; }
+        .header-info { text-align: right; }
+        .date-picker-container label { font-size: 0.9em; margin-right: 10px; font-weight: 500; }
+        #report_date { padding: 8px; border-radius: 4px; border: 1px solid var(--outline-color); background-color: var(--surface-color); font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+        .main-content { padding: 0 30px 30px 30px; }
+        .tab-bar { border-bottom: 1px solid #dadce0; display: flex; margin-bottom: 30px; flex-wrap: wrap; }
+        .tab-button {
+            padding: 16px 24px; cursor: pointer; border: none; background-color: transparent;
+            font-size: 1.1em; font-weight: 500; color: #5f6368; border-bottom: 3px solid transparent;
+            margin-bottom: -1px; transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+        }
+        .tab-button:hover { background-color: var(--primary-light); color: var(--primary-color); }
+        .tab-button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .sub-tab-bar {
+            border-bottom: 1px solid #e0e0e0; display: flex; margin-bottom: 20px;
+            background-color: #fafafa; border-radius: 8px; padding: 5px;
+        }
+        .sub-tab-button {
+            flex-grow: 1; text-align: center; padding: 10px 15px; cursor: pointer;
+            border: none; background-color: transparent; font-size: 0.95em;
+            font-weight: 500; color: #5f6368; border-radius: 6px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+        .sub-tab-button:hover { background-color: var(--primary-light); }
+        .sub-tab-button.active { color: white; background-color: var(--primary-color); }
+        .sub-tab-content { display: none; }
+        .sub-tab-content.active { display: block; }
+        
+        fieldset { border: 1px solid #dadce0; border-radius: 12px; padding: 30px; background-color: #fafafa; margin: 0; }
+        legend { font-size: 1.5em; font-weight: 500; padding: 0 10px; color: #3c4043; }
+        .form-group { margin-bottom: 24px; }
+        .form-row { display: flex; gap: 40px; }
+        .form-row > div { flex: 1; }
+        .radio-group label, .checkbox-group label { margin-right: 20px; font-weight: normal; }
+        label { display: block; margin-bottom: 8px; font-size: 0.9em; font-weight: 500; color: #5f6368; }
+        input[type="text"], select, textarea {
+            width: 100%; padding: 14px; font-size: 1em; border: 1px solid var(--outline-color);
+            border-radius: 8px; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: var(--surface-color); font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+        }
+        input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); }
+        .primary-button {
+            font-size: 1em; font-weight: 500; padding: 12px 28px; cursor: pointer; background-color: var(--primary-color);
+            color: white; border: none; border-radius: 24px; transition: transform 0.1s ease-out, box-shadow 0.2s ease-out;
+            box-shadow: var(--shadow-sm);
+        }
+        .primary-button:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+        .secondary-button {
+            font-size: 1em; font-weight: 500; padding: 10px 24px; cursor: pointer; background-color: transparent;
+            color: var(--primary-color); border: 1px solid var(--primary-color); border-radius: 24px;
+            transition: background-color 0.2s, color 0.2s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .secondary-button:hover { background-color: var(--primary-light); }
+        .results-output { margin-top: 30px; }
+        pre {
+            background: #e8eaed; padding: 16px; border-radius: 8px; white-space: pre-wrap;
+            word-wrap: break-word; border: 1px solid #dadce0; font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95em; max-height: 500px; overflow-y: auto;
+        }
+        .collapsible-trigger {
+            background-color: var(--surface-color); color: #3c4043; cursor: pointer; padding: 16px 20px;
+            width: 100%; border: 1px solid #dadce0; text-align: left; outline: none;
+            font-size: 1.1em; font-weight: 500; border-radius: 8px; display: flex;
+            justify-content: space-between; align-items: center; transition: background-color 0.2s, box-shadow 0.2s;
+            margin-bottom: 8px; box-shadow: var(--shadow-sm);
+        }
+        .collapsible-trigger:hover { background-color: #f8f9fa; box-shadow: 0 1px 3px 1px rgba(60, 64, 67, .15); }
+        .collapsible-trigger .arrow { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 1.5em; color: #5f6368; }
+        .collapsible-trigger.active .arrow { transform: rotate(180deg); }
+        .collapsible-content {
+            max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: var(--surface-color); border: 1px solid #dadce0; border-top: none;
+            border-radius: 0 0 8px 8px; margin-top: -8px; padding: 0;
+        }
+        .collapsible-content.active {
+             max-height: 70vh; overflow: hidden;
+        }
+        .table-container { 
+            width: 100%; height: 65vh;
+            overflow: auto; /* This enables both vertical and horizontal scrollbars when needed */
+            border-radius: 8px; 
+        }
+        .results-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9em; text-align: left; white-space: nowrap; }
+        .results-table th, .results-table td { padding: 10px 14px; border-bottom: 1px solid #dadce0; border-right: 1px solid #dadce0; }
+        .results-table thead th { background-color: #f1f3f4; font-weight: 600; position: sticky; top: 0; z-index: 2; }
+        .results-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
 
-# --- All connection logic has been REMOVED from this file. ---
-# It will now use the connection object passed from app.py.
+        .results-table th:nth-child(1), .results-table td:nth-child(1) { position: sticky; left: 0; z-index: 1; }
+        .results-table th:nth-child(2), .results-table td:nth-child(2) { position: sticky; left: 80px; z-index: 1; }
+        .results-table th:nth-child(3), .results-table td:nth-child(3) { position: sticky; left: 220px; z-index: 1; }
+        
+        .results-table thead th:nth-child(1), .results-table thead th:nth-child(2), .results-table thead th:nth-child(3) {
+            z-index: 3; background-color: #e8eaed;
+        }
+        .results-table tbody td:nth-child(1), .results-table tbody td:nth-child(2), .results-table tbody td:nth-child(3) {
+             background-color: var(--surface-color);
+        }
+         .results-table tbody tr:nth-child(even) td:nth-child(1), .results-table tbody tr:nth-child(even) td:nth-child(2), .results-table tbody tr:nth-child(even) td:nth-child(3) {
+             background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-title">TSR Web Tool</div>
+            <div class="header-info"><div class="date-picker-container"><label for="report_date">Report Date:</label><input type="date" id="report_date" name="report_date" value="{{ request_form.get('report_date', [''])[0] }}"></div></div>
+        </header>
 
-# --- Function for "Static Info" Tab ---
-def run_static_info_check(conn, id_type, id_code, report_date):
-    """Builds and runs a dynamic query using the provided database connection."""
-    
-    # This dictionary maps the dropdown value to your actual DB column names.
-    # --- YOU MUST UPDATE THESE COLUMN NAMES TO MATCH YOUR DATABASE TABLE ---
-    column_mapping = {
-        'Asset Control ID': 'AssetControlID', 'RIC': 'RIC_Code', 'Sedol': 'SedolIdentifier',
-        'Bloomberg': 'BloombergTicker', 'CUSIP': 'CUSIP', 'MARS': 'MarsCode', 'ESMP': 'ESMP_ID'
-    }
+        <main class="main-content">
+            <div class="tab-bar">
+                 <button class="tab-button" data-tab="sraMonitoring">SRA Feed Monitoring</button>
+                 <button class="tab-button" data-tab="adjustmentMonitoring">Adjustment Monitoring</button>
+                 <button class="tab-button" data-tab="weights">Weights</button>
+                 <button class="tab-button" data-tab="mqtVar">MQT VaR Figures</button>
+                 <button class="tab-button" data-tab="exclusionCheck">Exclusion Check</button>
+                 <button class="tab-button" data-tab="riskFactor">Risk Factor</button>
+            </div>
+            
+            <div id="sraMonitoring" class="tab-content"><!-- ... SRA content ... --></div>
+            <div id="adjustmentMonitoring" class="tab-content"><!-- ... Adjustment content ... --></div>
+            <div id="weights" class="tab-content"><!-- ... Weights content ... --></div>
+            <div id="mqtVar" class="tab-content"><!-- ... MQT VaR content ... --></div>
+            <div id="exclusionCheck" class="tab-content"><!-- ... Exclusion Check content ... --></div>
 
-    where_clauses = []
-    
-    if id_type.upper() == 'ALL':
-        for col_name in column_mapping.values():
-            where_clauses.append(f"[{col_name}] = '{id_code}'")
-        where_condition = " OR ".join(where_clauses)
-    elif id_type in column_mapping:
-        column_name = column_mapping[id_type]
-        where_condition = f"[{column_name}] = '{id_code}'"
-    else:
-        return f"ERROR: Invalid ID Type selected: {id_type}"
+            <div id="riskFactor" class="tab-content">
+                <fieldset>
+                    <legend>Risk Factor Checks</legend>
+                    <div class="sub-tab-bar">
+                        <button class="sub-tab-button" data-subtab="staticInfo">Static Info</button>
+                        <button class="sub-tab-button" data-subtab="atlasProxy">Atlas Full reval proxy</button>
+                        <button class="sub-tab-button" data-subtab="sraPnl">SRA PnL mapping</button>
+                    </div>
 
-    sql_query = f"""
-        SELECT TOP 100 AssetControlID, RIC_Code, SedolIdentifier, AssetName, CountryOfRisk
-        FROM YourStaticInfoTableName
-        WHERE {where_condition}
-        AND ValuationDate = '{report_date.replace('-', '')}'
-    """
-    
-    print(f"Executing Static Info Query:\n{sql_query}")
-    try:
-        df = pd.read_sql(sql_query, conn)
-        return df.to_string(index=False) if not df.empty else "No results found."
-    except Exception as e:
-        return f"Database Error: {e}"
+                    <!-- All sub-tab forms go here -->
+                    <div id="staticInfo" class="sub-tab-content"><!-- Static Info Form --></div>
+                    <div id="atlasProxy" class="sub-tab-content"><!-- Atlas Proxy Form --></div>
+                    <div id="sraPnl" class="sub-tab-content"><!-- SRA PnL Form --></div>
 
+                </fieldset>
+                 
+                 <!-- THE FIX: This results area now uses the scrollable table container -->
+                 <div class="results-output" id="riskFactorResult">
+                    {% if risk_factor_output %}
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>Results:</h2>
+                        <button type="button" class="secondary-button download-btn">Download Result</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        {{ risk_factor_output | safe }}
+                    </div>
 
-# --- Function for "Atlas Full reval proxy" Tab ---
-def run_atlas_proxy_check(conn, proxy_type, code, report_date):
-    """Builds and runs a query for Atlas proxy info."""
-    
-    if proxy_type == 'RF which is proxied':
-        column_name = 'OriginalRiskFactor'
-    elif proxy_type == 'RF on which proxied':
-        column_name = 'ProxiedRiskFactor'
-    else:
-        return f"ERROR: Invalid Proxy Type selected: {proxy_type}"
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
 
-    sql_query = f"""
-        SELECT OriginalRiskFactor, ProxiedRiskFactor, ProxyDate, ProxyReason
-        FROM YourAtlasProxyTableName
-        WHERE [{column_name}] = '{code}'
-    """
-    
-    print(f"Executing Atlas Proxy Query:\n{sql_query}")
-    try:
-        df = pd.read_sql(sql_query, conn)
-        return df.to_string(index=False) if not df.empty else "No results found."
-    except Exception as e:
-        return f"Database Error: {e}"
-
-
-# --- Function for "SRA PnL mapping" Tab ---
-def run_sra_pnl_check(conn, id_type, code, report_date):
-    """Builds and runs a query for SRA PnL mapping."""
-    
-    column_mapping = {
-        'Asset Identifier': 'AssetIdentifier', 'AssetId': 'InternalAssetID',
-        'AssetControlId': 'ACID', 'Country': 'CountryCode'
-    }
-
-    if id_type in column_mapping:
-        column_name = column_mapping[id_type]
-    else:
-        return f"ERROR: Invalid Identifier Type selected: {id_type}"
-
-    sql_query = f"""
-        SELECT AssetIdentifier, PnL_Account, SRA_Book, MappingOwner
-        FROM YourSraPnlMappingTableName
-        WHERE [{column_name}] = '{code}'
-    """
-
-    print(f"Executing SRA PnL Query:\n{sql_query}")
-    try:
-        df = pd.read_sql(sql_query, conn)
-        return df.to_string(index=False) if not df.empty else "No results found."
-    except Exception as e:
-        return f"Database Error: {e}"
+    <script>
+        // All JavaScript remains the same
+    </script>
+</body>
+</html>
 
