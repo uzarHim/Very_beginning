@@ -1,4 +1,67 @@
-import datetime
+import pandas as pd
+import os
+import glob
+from datetime import datetime
+import difflib
 
-# Calculate time starting from 1 second and correctly rolling over minutes and hours
-result['TIME'] = [datetime.time(((i+1) // 3600) % 24, ((i+1) // 60) % 60, (i+1) % 60) for i in range(len(df_commit))]
+# ... (_read_regional_data function is unchanged)
+
+def run_weights_check(index_etf, constituent, region, report_date, is_exact_match):
+    """
+    Performs a search for index/constituent weights, with an option for exact matching.
+    """
+    output_messages = []
+    file_path = "C:\\path\\to\\your\\data\\folder"
+    
+    index_etf = str(index_etf).strip() if index_etf else ""
+    constituent = str(constituent).strip() if constituent else ""
+    
+    df = _read_regional_data(region, report_date, file_path, output_messages)
+
+    if df.empty:
+        output_messages.append("\nERROR: No data loaded.")
+        return "\n".join(output_messages)
+
+    output_messages.append(f"\nSearch mode: {'EXACT' if is_exact_match else 'PARTIAL (CONTAINS)'}")
+
+    # --- UPDATED LOGIC ---
+    # Scenario 1: Both Index and Constituent are provided
+    if index_etf and constituent:
+        if is_exact_match:
+            result_df = df[(df['Index'] == index_etf) & (df['Constituent'] == constituent)]
+        else:
+            result_df = df[
+                (df['Index'].str.contains(index_etf, case=False, na=False)) &
+                (df['Constituent'].str.contains(constituent, case=False, na=False))
+            ]
+        # ... (rest of the logic for displaying results)
+
+    # Scenario 2: Only Index is provided
+    elif index_etf:
+        if is_exact_match:
+            result_df = df[df['Index'] == index_etf]
+        else:
+            result_df = df[df['Index'].str.contains(index_etf, case=False, na=False)]
+        # ... (rest of the logic)
+
+    # Scenario 3: Only Constituent is provided
+    elif constituent:
+        if is_exact_match:
+            result_df = df[df['Constituent'] == constituent]
+        else:
+            result_df = df[df['Constituent'].str.contains(constituent, case=False, na=False)]
+        # ... (rest of the logic)
+        
+        # The 'similar match' logic should only run for partial searches
+        if not is_exact_match and result_df.empty:
+            all_constituents = df['Constituent'].dropna().unique().astype(str)
+            similar_matches = difflib.get_close_matches(constituent, all_constituents, n=3, cutoff=0.6)
+            if similar_matches:
+                output_messages.append("\nDid you mean one of these?")
+                for match in similar_matches:
+                    output_messages.append(f"  - {match}")
+
+    else:
+        output_messages.append("\nPlease provide an Index/ETF, a Constituent, or both.")
+
+    return "\n".join(output_messages)
