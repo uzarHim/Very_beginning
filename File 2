@@ -1,515 +1,144 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TSR Web Tool</title>
-    <style>
-        :root {
-            --primary-color: #1a73e8; --primary-light: #d6eaff; --surface-color: #ffffff;
-            --on-surface-color: #202124; --outline-color: #bdc1c6; --background-color: #f1f3f4;
-            --header-gradient: linear-gradient(to right, #1a73e8, #1e88e5);
-            --shadow-sm: 0 1px 2px 0 rgba(60, 64, 67, .3); --shadow-md: 0 4px 8px 2px rgba(60, 64, 67, .15);
-        }
-        body {
-            font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 30px;
-            background-color: var(--background-color); color: var(--on-surface-color);
-            display: flex; justify-content: center;
-        }
-        .app-container {
-            width: 100%; max-width: 1400px; background-color: var(--surface-color);
-            border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden;
-        }
-        .header {
-            background: var(--header-gradient); padding: 18px 30px; display: flex;
-            justify-content: space-between; align-items: center; color: white;
-        }
-        .header-title { font-size: 1.6em; font-weight: 500; }
-        .header-info { text-align: right; }
-        .date-picker-container label { font-size: 0.9em; margin-right: 10px; font-weight: 500; }
-        #report_date { padding: 8px; border-radius: 4px; border: 1px solid var(--outline-color); background-color: var(--surface-color); font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
-        .main-content { padding: 0 30px 30px 30px; }
-        .tab-bar { border-bottom: 1px solid #dadce0; display: flex; margin-bottom: 30px; flex-wrap: wrap; }
-        .tab-button {
-            padding: 16px 24px; cursor: pointer; border: none; background-color: transparent;
-            font-size: 1.1em; font-weight: 500; color: #5f6368; border-bottom: 3px solid transparent;
-            margin-bottom: -1px; transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
-        }
-        .tab-button:hover { background-color: var(--primary-light); color: var(--primary-color); }
-        .tab-button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.5s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .sub-tab-bar {
-            border-bottom: 1px solid #e0e0e0; display: flex; margin-bottom: 20px;
-            background-color: #fafafa; border-radius: 8px; padding: 5px;
-        }
-        .sub-tab-button {
-            flex-grow: 1; text-align: center; padding: 10px 15px; cursor: pointer;
-            border: none; background-color: transparent; font-size: 0.95em;
-            font-weight: 500; color: #5f6368; border-radius: 6px;
-            transition: color 0.2s, background-color 0.2s;
-        }
-        .sub-tab-button:hover { background-color: var(--primary-light); }
-        .sub-tab-button.active { color: white; background-color: var(--primary-color); }
-        .sub-tab-content { display: none; }
-        .sub-tab-content.active { display: block; }
-        
-        fieldset { border: 1px solid #dadce0; border-radius: 12px; padding: 30px; background-color: #fafafa; margin: 0; }
-        legend { font-size: 1.5em; font-weight: 500; padding: 0 10px; color: #3c4043; }
-        .form-group { margin-bottom: 24px; }
-        .form-row { display: flex; gap: 40px; }
-        .form-row > div { flex: 1; }
-        .radio-group label, .checkbox-group label { margin-right: 20px; font-weight: normal; }
-        label { display: block; margin-bottom: 8px; font-size: 0.9em; font-weight: 500; color: #5f6368; }
-        input[type="text"], select, textarea {
-            width: 100%; padding: 14px; font-size: 1em; border: 1px solid var(--outline-color);
-            border-radius: 8px; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
-            background-color: var(--surface-color); font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-        }
-        input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); }
-        .primary-button {
-            font-size: 1em; font-weight: 500; padding: 12px 28px; cursor: pointer; background-color: var(--primary-color);
-            color: white; border: none; border-radius: 24px; transition: transform 0.1s ease-out, box-shadow 0.2s ease-out;
-            box-shadow: var(--shadow-sm);
-        }
-        .primary-button:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
-        .secondary-button {
-            font-size: 1em; font-weight: 500; padding: 10px 24px; cursor: pointer; background-color: transparent;
-            color: var(--primary-color); border: 1px solid var(--primary-color); border-radius: 24px;
-            transition: background-color 0.2s, color 0.2s; display: inline-flex; align-items: center; gap: 8px;
-        }
-        .secondary-button:hover { background-color: var(--primary-light); }
-        .results-output { margin-top: 30px; }
-        pre {
-            background: #e8eaed; padding: 16px; border-radius: 8px; white-space: pre-wrap;
-            word-wrap: break-word; border: 1px solid #dadce0; font-family: 'Courier New', Courier, monospace;
-            font-size: 0.95em; max-height: 500px; overflow-y: auto;
-        }
-        .collapsible-trigger {
-            background-color: var(--surface-color); color: #3c4043; cursor: pointer; padding: 16px 20px;
-            width: 100%; border: 1px solid #dadce0; text-align: left; outline: none;
-            font-size: 1.1em; font-weight: 500; border-radius: 8px; display: flex;
-            justify-content: space-between; align-items: center; transition: background-color 0.2s, box-shadow 0.2s;
-            margin-bottom: 8px; box-shadow: var(--shadow-sm);
-        }
-        .collapsible-trigger:hover { background-color: #f8f9fa; box-shadow: 0 1px 3px 1px rgba(60, 64, 67, .15); }
-        .collapsible-trigger .arrow { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 1.5em; color: #5f6368; }
-        .collapsible-trigger.active .arrow { transform: rotate(180deg); }
-        .collapsible-content {
-            max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background-color: var(--surface-color); border: 1px solid #dadce0; border-top: none;
-            border-radius: 0 0 8px 8px; margin-top: -8px; padding: 0;
-        }
-        .collapsible-content.active {
-             max-height: 70vh; overflow: hidden;
-        }
-        .table-container { 
-            width: 100%; height: 65vh;
-            overflow: auto; border-radius: 8px; 
-        }
-        .results-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9em; text-align: left; white-space: nowrap; }
-        .results-table th, .results-table td { padding: 10px 14px; border-bottom: 1px solid #dadce0; border-right: 1px solid #dadce0; }
-        .results-table thead th { background-color: #f1f3f4; font-weight: 600; position: sticky; top: 0; z-index: 2; }
-        .results-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
+from flask import Flask, request, render_template
+from datetime import datetime
+import pyodbc
 
-        .results-table th:nth-child(1), .results-table td:nth-child(1) { position: sticky; left: 0; z-index: 1; }
-        .results-table th:nth-child(2), .results-table td:nth-child(2) { position: sticky; left: 80px; z-index: 1; }
-        .results-table th:nth-child(3), .results-table td:nth-child(3) { position: sticky; left: 220px; z-index: 1; }
-        
-        .results-table thead th:nth-child(1), .results-table thead th:nth-child(2), .results-table thead th:nth-child(3) {
-            z-index: 3; background-color: #e8eaed;
-        }
-        .results-table tbody td:nth-child(1), .results-table tbody td:nth-child(2), .results-table tbody td:nth-child(3) {
-             background-color: var(--surface-color);
-        }
-         .results-table tbody tr:nth-child(even) td:nth-child(1), .results-table tbody tr:nth-child(even) td:nth-child(2), .results-table tbody tr:nth-child(even) td:nth-child(3) {
-             background-color: #f8f9fa;
-        }
-    </style>
-</head>
-<body>
-    <div class="app-container">
-        <header class="header">
-            <div class="header-title">TSR Web Tool</div>
-            <div class="header-info"><div class="date-picker-container"><label for="report_date">Report Date:</label><input type="date" id="report_date" name="report_date" value="{{ request_form.get('report_date', [''])[0] }}"></div></div>
-        </header>
+# --- Import all your functions from your separate script files ---
+# Ensure these filenames and function names match your project
+from sra_monitoring_script import run_sra_monitoring
+from adjustment_script import run_adjustment_monitoring
+from weights_script import run_weights_check
+from mqt_var_script import run_mqt_var_check
+from exclusion_check_script import run_exclusion_check
+from risk_factor_script import run_static_info_check, run_atlas_proxy_check, run_sra_pnl_check
 
-        <main class="main-content">
-            <div class="tab-bar">
-                 <button class="tab-button" data-tab="sraMonitoring">SRA Feed Monitoring</button>
-                 <button class="tab-button" data-tab="adjustmentMonitoring">Adjustment Monitoring</button>
-                 <button class="tab-button" data-tab="weights">Weights</button>
-                 <button class="tab-button" data-tab="mqtVar">MQT VaR Figures</button>
-                 <button class="tab-button" data-tab="exclusionCheck">Exclusion Check</button>
-                 <button class="tab-button" data-tab="riskFactor">Risk Factor</button>
-            </div>
-            
-            <div id="sraMonitoring" class="tab-content">
-                 <form action="/run_sra_monitoring" method="post">
-                    <fieldset>
-                        <legend>Select Asset Class</legend>
-                        <div class="form-group radio-group">
-                            <label><input type="radio" name="asset_class" value="Equities" {% if request_form.get('asset_class', ['Equities'])[0] == 'Equities' %}checked{% endif %}> Equities</label>
-                            <label><input type="radio" name="asset_class" value="Credit" {% if request_form.get('asset_class', [''])[0] == 'Credit' %}checked{% endif %}> Credit</label>
-                            <label><input type="radio" name="asset_class" value="SP" {% if request_form.get('asset_class', [''])[0] == 'SP' %}checked{% endif %}> SP</label>
-                        </div>
-                        <button type="submit" class="primary-button">Run Monitoring</button>
-                    </fieldset>
-                 </form>
-                 <div class="results-output" id="sraMonitoringResult">
-                    {% if sra_output %}
-                        <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
-                        <pre>{{ sra_output }}</pre>
-                    {% endif %}
-                 </div>
-            </div>
+# --- 1. CREATE A SINGLE, SHARED DATABASE CONNECTION ---
+# IMPORTANT: Replace this with your actual, secure connection string.
+DB_CONNECTION_STRING = (
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    "SERVER=your_server_name;"
+    "DATABASE=your_database_name;"
+    "UID=your_username;"
+    "PWD=your_password;"
+)
+try:
+    conn = pyodbc.connect(DB_CONNECTION_STRING)
+    print("Database connection successful.")
+except Exception as e:
+    print(f"FATAL: DATABASE CONNECTION FAILED. The server will not start. Error: {e}")
+    conn = None # Set conn to None if connection fails
 
-            <div id="adjustmentMonitoring" class="tab-content">
-                <form action="/run_adjustment_monitoring" method="post">
-                    <fieldset>
-                        <legend>Check Adjustment</legend>
-                        <div class="form-group">
-                            <label for="adjustment_id">Adjustment ID:</label>
-                            <input type="text" id="adjustment_id" name="adjustment_id" placeholder="e.g., ADJ-54321" value="{{ request_form.get('adjustment_id', [''])[0] }}">
-                        </div>
-                        <button type="submit" class="primary-button">Check Adjustment</button>
-                    </fieldset>
-                </form>
-                <div class="results-output" id="adjustmentMonitoringResult">
-                   {% if adjustment_output %}
-                       <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
-                       <pre>{{ adjustment_output }}</pre>
-                   {% endif %}
-                </div>
-            </div>
+app = Flask(__name__)
 
-            <div id="weights" class="tab-content">
-                <form action="/run_weights_check" method="post">
-                    <fieldset>
-                        <legend>Check Weights</legend>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="index_etf">Index/ETF:</label>
-                                <input type="text" id="index_etf" name="index_etf" placeholder="e.g., S&P 500" value="{{ request_form.get('index_etf', [''])[0] }}">
-                                <div class="checkbox-group" style="padding-top: 10px;">
-                                    <label style="font-weight: normal;">
-                                        <input type="checkbox" name="index_exact_match" value="true" {% if 'true' in request_form.get('index_exact_match', []) %}checked{% endif %}>
-                                        Exact Match for Index
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="constituent">Constituent:</label>
-                                <input type="text" id="constituent" name="constituent" placeholder="e.g., AAPL" value="{{ request_form.get('constituent', [''])[0] }}">
-                                <div class="checkbox-group" style="padding-top: 10px;">
-                                    <label style="font-weight: normal;">
-                                        <input type="checkbox" name="constituent_exact_match" value="true" {% if 'true' in request_form.get('constituent_exact_match', []) %}checked{% endif %}>
-                                        Exact Match for Constituent
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="region">Region:</label>
-                            <select id="region" name="region">
-                                <option value="APAC" {% if request_form.get('region', [''])[0] == 'APAC' %}selected{% endif %}>APAC</option>
-                                <option value="EMEA" {% if request_form.get('region', [''])[0] == 'EMEA' %}selected{% endif %}>EMEA</option>
-                                <option value="AMER" {% if request_form.get('region', [''])[0] == 'AMER' %}selected{% endif %}>AMER</option>
-                                <option value="ALL" {% if request_form.get('region', ['ALL'])[0] == 'ALL' %}selected{% endif %}>Search in all</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="primary-button">Check Weights</button>
-                    </fieldset>
-                </form>
-                <div class="results-output" id="weightsResult">
-                   {% if weights_output %}
-                       <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
-                       <pre>{{ weights_output }}</pre>
-                   {% endif %}
-                </div>
-            </div>
-            
-            <div id="mqtVar" class="tab-content">
-                 <form action="/run_var_figures" method="post">
-                    <fieldset>
-                        <legend>Get MQT VaR Figures</legend>
-                        <div class="form-group">
-                            <label for="node">Node:</label>
-                            <input type="text" id="node" name="node" placeholder="e.g., 180216" value="{{ request_form.get('node', [''])[0] }}">
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group checkbox-group">
-                                <label>VaR Type:</label>
-                                <label><input type="checkbox" name="var_type" value="DVaR" {% if 'DVaR' in request_form.get('var_type', []) %}checked{% endif %}> DVaR</label>
-                                <label><input type="checkbox" name="var_type" value="SVaR" {% if 'SVaR' in request_form.get('var_type', []) %}checked{% endif %}> SVaR</label>
-                            </div>
-                            <div class="form-group radio-group">
-                                <label>Confidence Interval:</label>
-                                <label><input type="radio" name="confidence_interval" value="95" {% if request_form.get('confidence_interval', ['99'])[0] == '95' %}checked{% endif %}> 95%</label>
-                                <label><input type="radio" name="confidence_interval" value="99" {% if request_form.get('confidence_interval', ['99'])[0] == '99' %}checked{% endif %}> 99%</label>
-                            </div>
-                        </div>
-                        <button type="submit" class="primary-button">Get VaR Figures</button>
-                    </fieldset>
-                 </form>
-                 <div class="results-output" id="mqtVarResult">
-                    {% if mqt_output %}
-                        <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
-                        {% if mqt_output.dvar_result %}
-                        <div class="collapsible">
-                            <button type="button" class="collapsible-trigger"><span>DVaR Result</span><span class="arrow">▼</span></button>
-                            <div class="collapsible-content">
-                                <div class="table-container">
-                                    {{ mqt_output.dvar_result | safe }}
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% if mqt_output.svar_result %}
-                        <div class="collapsible">
-                             <button type="button" class="collapsible-trigger"><span>SVaR Result</span><span class="arrow">▼</span></button>
-                            <div class="collapsible-content">
-                                <div class="table-container">
-                                    {{ mqt_output.svar_result | safe }}
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    {% endif %}
-                 </div>
-            </div>
+@app.route("/")
+def index():
+    # Pass an empty dictionary on the first page load to prevent errors
+    return render_template("dashboard.html", request_form={})
 
-            <div id="exclusionCheck" class="tab-content">
-                 <form action="/run_exclusion_check" method="post">
-                    <fieldset>
-                        <legend>Run Exclusion Check</legend>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="feed">Feed:</label>
-                                <input type="text" id="feed" name="feed" placeholder="e.g., REUTERS_FEED" value="{{ request_form.get('feed', [''])[0] }}">
-                                <div class="checkbox-group" style="padding-top: 10px;">
-                                    <label style="font-weight: normal;">
-                                        <input type="checkbox" name="feed_exact_match" value="true" {% if 'true' in request_form.get('feed_exact_match', []) %}checked{% endif %}>
-                                        Exact Match for Feed
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="book">Book:</label>
-                                <input type="text" id="book" name="book" placeholder="e.g., EQUITY_BOOK_1" value="{{ request_form.get('book', [''])[0] }}">
-                                <div class="checkbox-group" style="padding-top: 10px;">
-                                    <label style="font-weight: normal;">
-                                        <input type="checkbox" name="book_exact_match" value="true" {% if 'true' in request_form.get('book_exact_match', []) %}checked{% endif %}>
-                                        Exact Match for Book
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" class="primary-button">Run Check</button>
-                    </fieldset>
-                 </form>
-                 <div class="results-output" id="exclusionCheckResult">
-                   {% if exclusion_output %}
-                       <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
-                       <pre>{{ exclusion_output }}</pre>
-                   {% endif %}
-                 </div>
-            </div>
+# --- ALL ROUTES ARE NOW COMPLETE AND CALL THEIR REAL SCRIPTS ---
 
-            <div id="riskFactor" class="tab-content">
-                <fieldset>
-                    <legend>Risk Factor Checks</legend>
-                    <div class="sub-tab-bar">
-                        <button class="sub-tab-button" data-subtab="staticInfo">Static Info</button>
-                        <button class="sub-tab-button" data-subtab="atlasProxy">Atlas Full reval proxy</button>
-                        <button class="sub-tab-button" data-subtab="sraPnl">SRA PnL mapping</button>
-                    </div>
+@app.route("/run_sra_monitoring", methods=["POST"])
+def handle_sra_monitoring():
+    request_form_data = request.form.to_dict(flat=False)
+    report_date = request.form.get("report_date")
+    asset_class = request.form.get("asset_class")
+    output_message = run_sra_monitoring(conn, asset_class, report_date)
+    return render_template("dashboard.html", sra_output=output_message, request_form=request_form_data)
 
-                    <div id="staticInfo" class="sub-tab-content">
-                        <form action="/run_static_info" method="post">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="id_type">ID Type:</label>
-                                    <select id="id_type" name="id_type">
-                                        <option value="Asset Control ID">Asset Control ID</option>
-                                        <option value="RIC">RIC</option>
-                                        <option value="Sedol">Sedol</option>
-                                        <option value="Bloomberg">Bloomberg</option>
-                                        <option value="CUSIP">CUSIP</option>
-                                        <option value="MARS">MARS</option>
-                                        <option value="ESMP">ESMP</option>
-                                        <option value="ALL">Search in all</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="id_code">Code:</label>
-                                    <input type="text" id="id_code" name="id_code" placeholder="Enter corresponding code">
-                                </div>
-                            </div>
-                            <button type="submit" class="primary-button">Get Static Info</button>
-                        </form>
-                    </div>
+@app.route("/run_adjustment_monitoring", methods=["POST"])
+def handle_adjustment_monitoring():
+    request_form_data = request.form.to_dict(flat=False)
+    report_date = request.form.get("report_date")
+    adjustment_id = request.form.get("adjustment_id")
+    output_message = run_adjustment_monitoring(conn, adjustment_id, report_date)
+    return render_template("dashboard.html", adjustment_output=output_message, request_form=request_form_data)
 
-                    <div id="atlasProxy" class="sub-tab-content">
-                        <form action="/run_atlas_proxy" method="post">
-                             <div class="form-row">
-                                <div class="form-group">
-                                    <label for="atlas_rf_type">Proxy Type:</label>
-                                    <select id="atlas_rf_type" name="atlas_rf_type">
-                                        <option value="RF which is proxied">RF which is proxied</option>
-                                        <option value="RF on which proxied">RF on which proxied</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="atlas_rf_code">Code:</label>
-                                    <input type="text" id="atlas_rf_code" name="atlas_rf_code" placeholder="Enter corresponding code">
-                                </div>
-                            </div>
-                            <button type="submit" class="primary-button">Get Atlas Proxy</button>
-                        </form>
-                    </div>
-                    
-                    <div id="sraPnl" class="sub-tab-content">
-                        <form action="/run_sra_pnl" method="post">
-                             <div class="form-row">
-                                <div class="form-group">
-                                    <label for="sra_id_type">Identifier Type:</label>
-                                    <select id="sra_id_type" name="sra_id_type">
-                                        <option value="Asset Identifier">Asset Identifier</option>
-                                        <option value="AssetId">AssetId</option>
-                                        <option value="AssetControlId">AssetControlId</option>
-                                        <option value="Country">Country</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="sra_id_code">Code:</label>
-                                    <input type="text" id="sra_id_code" name="sra_id_code" placeholder="Enter corresponding code">
-                                </div>
-                            </div>
-                            <button type="submit" class="primary-button">Get PnL Mapping</button>
-                        </form>
-                    </div>
-                </fieldset>
-                 <div class="results-output" id="riskFactorResult">
-                    {% if risk_factor_output %}
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h2>Results:</h2>
-                        <button type="button" class="secondary-button download-btn">Download Result</button>
-                    </div>
-                    <div class="table-container">
-                        {{ risk_factor_output | safe }}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </main>
-    </div>
+@app.route("/run_weights_check", methods=["POST"])
+def handle_weights_check():
+    request_form_data = request.form.to_dict(flat=False)
+    report_date = request.form.get("report_date")
+    index_etf = request.form.get("index_etf")
+    constituent = request.form.get("constituent")
+    region = request.form.get("region")
+    
+    # Read the state of each checkbox
+    is_index_exact = request.form.get("index_exact_match") == "true"
+    is_constituent_exact = request.form.get("constituent_exact_match") == "true"
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const datePicker = document.getElementById('report_date');
-            if (!datePicker.value) {
-                const today = new Date();
-                let prevBusinessDay = new Date(today);
-                if (today.getDay() === 0) { prevBusinessDay.setDate(today.getDate() - 2); }
-                else if (today.getDay() === 1) { prevBusinessDay.setDate(today.getDate() - 3); }
-                else { prevBusinessDay.setDate(today.getDate() - 1); }
-                datePicker.value = prevBusinessDay.toISOString().split('T')[0];
-            }
-            
-            const allForms = document.querySelectorAll('form');
-            allForms.forEach(form => {
-                form.addEventListener('submit', (e) => {
-                    let dateInput = form.querySelector('input[name="report_date"]');
-                    if (!dateInput) {
-                        dateInput = document.createElement('input');
-                        dateInput.type = 'hidden'; dateInput.name = 'report_date';
-                        form.appendChild(dateInput);
-                    }
-                    dateInput.value = document.getElementById('report_date').value;
-                });
-            });
+    output_message = run_weights_check(
+        index_etf=index_etf, 
+        constituent=constituent, 
+        region=region, 
+        report_date=report_date,
+        is_index_exact=is_index_exact,
+        is_constituent_exact=is_constituent_exact
+    )
+    return render_template("dashboard.html", weights_output=output_message, request_form=request_form_data)
 
-            function setupTabs(containerSelector, buttonClass, contentClass, storageKey, defaultTab) {
-                const buttons = document.querySelectorAll(`${containerSelector} .${buttonClass}`);
-                const contents = document.querySelectorAll(`${containerSelector} .${contentClass}`);
-                const dataAttribute = buttonClass.includes('sub') ? 'subtab' : 'tab';
-                
-                function activate(name) {
-                    if (!name) return;
-                    buttons.forEach(btn => btn.classList.toggle("active", btn.dataset[dataAttribute] === name));
-                    contents.forEach(content => content.classList.toggle("active", content.id === name));
-                }
+@app.route("/run_var_figures", methods=["POST"])
+def handle_var_figures():
+    request_form_data = request.form.to_dict(flat=False)
+    report_date_yyyymmdd = datetime.strptime(request.form.get("report_date"), "%Y-%m-%d").strftime("%Y%m%d")
+    node = request.form.get("node")
+    var_types = request.form.getlist("var_type")
+    confidence_interval = request.form.get("confidence_interval")
+    results_dict = run_mqt_var_check(conn, node, report_date_yyyymmdd, confidence_interval, var_types)
+    return render_template("dashboard.html", mqt_output=results_dict, request_form=request_form_data)
 
-                buttons.forEach(button => {
-                    button.addEventListener("click", () => {
-                        const name = button.dataset[dataAttribute];
-                        sessionStorage.setItem(storageKey, name);
-                        activate(name);
-                    });
-                });
-                
-                const savedValue = sessionStorage.getItem(storageKey) || defaultTab;
-                activate(savedValue);
-            }
+@app.route("/run_exclusion_check", methods=["POST"])
+def handle_exclusion_check():
+    request_form_data = request.form.to_dict(flat=False)
+    report_date = request.form.get("report_date")
+    feed = request.form.get("feed")
+    book = request.form.get("book")
+    
+    # Read the state of the new checkboxes for exclusion check
+    is_feed_exact = request.form.get("feed_exact_match") == "true"
+    is_book_exact = request.form.get("book_exact_match") == "true"
+    
+    output_message = run_exclusion_check(
+        conn=conn, 
+        feed=feed, 
+        book=book, 
+        report_date=report_date,
+        is_feed_exact=is_feed_exact,
+        is_book_exact=is_book_exact
+    )
+    return render_template("dashboard.html", exclusion_output=output_message, request_form=request_form_data)
 
-            setupTabs('.app-container', 'tab-button', 'tab-content', 'activeTab', 'sraMonitoring');
-            setupTabs('#riskFactor', 'sub-tab-button', 'sub-tab-content', 'activeSubTab', 'staticInfo');
-            
-            document.querySelectorAll('.collapsible-trigger').forEach(button => {
-                button.addEventListener('click', () => {
-                    button.classList.toggle('active');
-                    const content = button.nextElementSibling;
-                    content.classList.toggle('active');
-                    if (content.style.maxHeight) {
-                        content.style.maxHeight = null;
-                    } else {
-                        content.style.maxHeight = "70vh"; 
-                    }
-                });
-            });
+# --- ROUTES FOR THE RISK FACTOR SUB-TABS ---
 
-            document.querySelectorAll('.download-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const resultsOutput = e.target.closest('.results-output');
-                    let data = '';
-                    let filename = 'results.csv';
+@app.route("/run_static_info", methods=["POST"])
+def handle_static_info():
+    request_form_data = request.form.to_dict(flat=False)
+    report_date = request.form.get("report_date")
+    id_type = request.form.get("id_type")
+    id_code = request.form.get("id_code")
+    output_message = run_static_info_check(conn, id_type, id_code, report_date)
+    return render_template("dashboard.html", risk_factor_output=output_message, request_form=request_form_data)
 
-                    const preElement = resultsOutput.querySelector('pre');
-                    const tableElement = resultsOutput.querySelector('.results-table');
-                    
-                    if (tableElement) {
-                        const rows = tableElement.querySelectorAll('tr');
-                        const csv = [];
-                        rows.forEach(row => {
-                            const rowData = [];
-                            row.querySelectorAll('th, td').forEach(cell => {
-                                rowData.push(`"${cell.innerText.replace(/"/g, '""')}"`);
-                            });
-                            csv.push(rowData.join(','));
-                        });
-                        data = csv.join('\n');
-                    } else if (preElement) {
-                        data = `"${preElement.innerText.replace(/"/g, '""')}"`;
-                    }
+@app.route("/run_atlas_proxy", methods=["POST"])
+def handle_atlas_proxy():
+    request_form_data = request.form.to_dict(flat=False)
+    report_date = request.form.get("report_date")
+    proxy_type = request.form.get("atlas_rf_type")
+    code = request.form.get("atlas_rf_code")
+    output_message = run_atlas_proxy_check(conn, proxy_type, code, report_date)
+    return render_template("dashboard.html", risk_factor_output=output_message, request_form=request_form_data)
 
-                    if (!data) { return; }
+@app.route("/run_sra_pnl", methods=["POST"])
+def handle_sra_pnl():
+    request_form_data = request.form.to_dict(flat=False)
+    report_date = request.form.get("report_date")
+    id_type = request.form.get("sra_id_type")
+    code = request.form.get("sra_id_code")
+    output_message = run_sra_pnl_check(conn, id_type, code, report_date)
+    return render_template("dashboard.html", risk_factor_output=output_message, request_form=request_form_data)
 
-                    const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    const url = URL.createObjectURL(blob);
-                    link.setAttribute('href', url);
-                    link.setAttribute('download', filename);
-                    link.style.visibility = 'hidden';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                });
-            });
-        });
-    </script>
-</body>
-</html>
+if __name__ == "__main__":
+    if conn:
+        from waitress import serve
+        print("Server running at http://0.0.0.0:8080")
+        serve(app, host="0.0.0.0", port=8080)
+    else:
+        print("Could not start server due to database connection failure. Please check your DB_CONNECTION_STRING.")
 
