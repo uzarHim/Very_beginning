@@ -1,0 +1,123 @@
+import pandas as pd
+import os
+import glob
+from datetime import datetime
+import difflib
+
+def _read_regional_data(region, report_date, file_path, messages):
+    """
+    Helper function to find the latest regional CSV file(s) and combine them.
+    Returns a single DataFrame and any notification messages.
+    """
+    date_yyyymmdd = datetime.strptime(report_date, "%Y-%m-%d").strftime("%Y%m%d")
+    
+    regions_to_check = []
+    if region.upper() == 'ALL':
+        regions_to_check = ['APAC', 'EMEA', 'AMER']
+    else:
+        regions_to_check = [region]
+
+    all_dfs = []
+    for reg in regions_to_check:
+        search_pattern = os.path.join(file_path, f"{reg}_{date_yyyymmdd}*.csv")
+        found_files = glob.glob(search_pattern)
+
+        if not found_files:
+            messages.append(f"INFO: No files found for region '{reg}' with pattern '{reg}_{date_yyyymmdd}*.csv'")
+            continue
+
+        found_files.sort(key=os.path.getmtime, reverse=True)
+        latest_file = found_files[0]
+        
+        messages.append(f"INFO: Reading latest file for region '{reg}': {os.path.basename(latest_file)}")
+        if len(found_files) > 1:
+            messages.append(f"WARNING: Found {len(found_files)} matching files for '{reg}'. Using the newest one.")
+            messages.append("  All files found:")
+            for f in found_files:
+                messages.append(f"  - {os.path.basename(f)}")
+        
+        try:
+            df = pd.read_csv(latest_file)
+            df['Region'] = reg 
+            all_dfs.append(df)
+        except Exception as e:
+            messages.append(f"ERROR: Could not read file {os.path.basename(latest_file)}. Reason: {e}")
+
+    if not all_dfs:
+        return pd.DataFrame()
+
+    return pd.concat(all_dfs, ignore_index=True)
+
+
+def run_weights_check(index_etf, constituent, region, report_date, is_index_exact, is_constituent_exact):
+    """
+    Performs a search with separate exact match controls for index and constituent.
+    """
+    output_messages = []
+    # --- IMPORTANT: Change this to the actual path where your CSV files are stored ---
+    file_path = "C:\\path\\to\\your\\data\\folder"
+    
+    index_etf = str(index_etf).strip() if index_etf else ""
+    constituent = str(constituent).strip() if constituent else ""
+    
+    df = _read_regional_data(region, report_date, file_path, output_messages)
+
+    if df.empty:
+        output_messages.append("\nERROR: No data loaded. Please check file paths and dates.")
+        return "\n".join(output_messages)
+
+    # --- UPDATED LOGIC TO HANDLE SEPARATE MATCH TYPES ---
+    
+    conditions = []
+    
+    # Build the condition for the Index search
+    if index_etf:
+        # IMPORTANT: Change 'Index' to your actual column name
+        if is_index_exact:
+            conditions.append(df['Index'] == index_etf)
+            output_messages.append(f"\nSearching for EXACT Index: '{index_etf}'")
+        else:
+            conditions.append(df['Index'].str.contains(index_etf, case=False, na=False))
+            output_messages.append(f"\nSearching for PARTIAL Index: '{index_etf}'")
+
+    # Build the condition for the Constituent search
+    if constituent:
+        # IMPORTANT: Change 'Constituent' to your actual column name
+        if is_constituent_exact:
+            conditions.append(df['Constituent'] == constituent)
+            output_messages.append(f"Searching for EXACT Constituent: '{constituent}'")
+        else:
+            conditions.append(df['Constituent'].str.contains(constituent, case=False, na=False))
+            output_messages.append(f"Searching for PARTIAL Constituent: '{constituent}'")
+    
+    if not conditions:
+        output_messages.append("\nPlease provide an Index/ETF or a Constituent to search.")
+        return "\n".join(output_messages)
+
+    # Combine all conditions with a logical AND
+    final_condition = conditions[0]
+    for cond in conditions[1:]:
+        final_condition = final_condition & cond
+        
+    result_df = df[final_condition]
+
+    # --- Display results ---
+    if not result_df.empty:
+        output_messages.append("\n--- Found Results ---")
+        # IMPORTANT: Change 'Weight' to your actual column name
+        number_formatter = {'Weight': '{:.6f}'.format}
+        output_messages.append(result_df[['Region', 'Index', 'Constituent', 'Weight']].to_string(index=False, formatters=number_formatter))
+    else:
+        output_messages.append("\n--- No Match Found ---")
+        
+        # Only suggest similar constituents if it was a partial search
+        if constituent and not is_constituent_exact:
+            all_constituents = df['Constituent'].dropna().unique().astype(str)
+            similar_matches = difflib.get_close_matches(constituent, all_constituents, n=3, cutoff=0.6)
+            if similar_matches:
+                output_messages.append("\nDid you mean one of these constituents?")
+                for match in similar_matches:
+                    output_messages.append(f"  - {match}")
+
+    return "\n".join(output_messages)
+
