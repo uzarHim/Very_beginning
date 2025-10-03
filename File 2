@@ -1,144 +1,85 @@
-from flask import Flask, request, render_template
-from datetime import datetime
+import pandas as pd
 import pyodbc
 
-# --- Import all your functions from your separate script files ---
-# Ensure these filenames and function names match your project
-from sra_monitoring_script import run_sra_monitoring
-from adjustment_script import run_adjustment_monitoring
-from weights_script import run_weights_check
-from mqt_var_script import run_mqt_var_check
-from exclusion_check_script import run_exclusion_check
-from risk_factor_script import run_static_info_check, run_atlas_proxy_check, run_sra_pnl_check
-
-# --- 1. CREATE A SINGLE, SHARED DATABASE CONNECTION ---
-# IMPORTANT: Replace this with your actual, secure connection string.
-DB_CONNECTION_STRING = (
-    "DRIVER={ODBC Driver 17 for SQL Server};"
-    "SERVER=your_server_name;"
-    "DATABASE=your_database_name;"
-    "UID=your_username;"
-    "PWD=your_password;"
-)
-try:
-    conn = pyodbc.connect(DB_CONNECTION_STRING)
-    print("Database connection successful.")
-except Exception as e:
-    print(f"FATAL: DATABASE CONNECTION FAILED. The server will not start. Error: {e}")
-    conn = None # Set conn to None if connection fails
-
-app = Flask(__name__)
-
-@app.route("/")
-def index():
-    # Pass an empty dictionary on the first page load to prevent errors
-    return render_template("dashboard.html", request_form={})
-
-# --- ALL ROUTES ARE NOW COMPLETE AND CALL THEIR REAL SCRIPTS ---
-
-@app.route("/run_sra_monitoring", methods=["POST"])
-def handle_sra_monitoring():
-    request_form_data = request.form.to_dict(flat=False)
-    report_date = request.form.get("report_date")
-    asset_class = request.form.get("asset_class")
-    output_message = run_sra_monitoring(conn, asset_class, report_date)
-    return render_template("dashboard.html", sra_output=output_message, request_form=request_form_data)
-
-@app.route("/run_adjustment_monitoring", methods=["POST"])
-def handle_adjustment_monitoring():
-    request_form_data = request.form.to_dict(flat=False)
-    report_date = request.form.get("report_date")
-    adjustment_id = request.form.get("adjustment_id")
-    output_message = run_adjustment_monitoring(conn, adjustment_id, report_date)
-    return render_template("dashboard.html", adjustment_output=output_message, request_form=request_form_data)
-
-@app.route("/run_weights_check", methods=["POST"])
-def handle_weights_check():
-    request_form_data = request.form.to_dict(flat=False)
-    report_date = request.form.get("report_date")
-    index_etf = request.form.get("index_etf")
-    constituent = request.form.get("constituent")
-    region = request.form.get("region")
+def run_exclusion_check(conn, feed, book, report_date, is_feed_exact, is_book_exact):
+    """
+    Fetches exclusion data from a database and filters it based on user input
+    for feed and book, with options for exact matching.
+    """
+    output_messages = []
     
-    # Read the state of each checkbox
-    is_index_exact = request.form.get("index_exact_match") == "true"
-    is_constituent_exact = request.form.get("constituent_exact_match") == "true"
-
-    output_message = run_weights_check(
-        index_etf=index_etf, 
-        constituent=constituent, 
-        region=region, 
-        report_date=report_date,
-        is_index_exact=is_index_exact,
-        is_constituent_exact=is_constituent_exact
-    )
-    return render_template("dashboard.html", weights_output=output_message, request_form=request_form_data)
-
-@app.route("/run_var_figures", methods=["POST"])
-def handle_var_figures():
-    request_form_data = request.form.to_dict(flat=False)
-    report_date_yyyymmdd = datetime.strptime(request.form.get("report_date"), "%Y-%m-%d").strftime("%Y%m%d")
-    node = request.form.get("node")
-    var_types = request.form.getlist("var_type")
-    confidence_interval = request.form.get("confidence_interval")
-    results_dict = run_mqt_var_check(conn, node, report_date_yyyymmdd, confidence_interval, var_types)
-    return render_template("dashboard.html", mqt_output=results_dict, request_form=request_form_data)
-
-@app.route("/run_exclusion_check", methods=["POST"])
-def handle_exclusion_check():
-    request_form_data = request.form.to_dict(flat=False)
-    report_date = request.form.get("report_date")
-    feed = request.form.get("feed")
-    book = request.form.get("book")
+    # Clean up inputs
+    feed = str(feed).strip() if feed else ""
+    book = str(book).strip() if book else ""
     
-    # Read the state of the new checkboxes for exclusion check
-    is_feed_exact = request.form.get("feed_exact_match") == "true"
-    is_book_exact = request.form.get("book_exact_match") == "true"
+    # Format the date for the SQL query (assuming YYYYMMDD format in DB)
+    date_yyyymmdd = report_date.replace('-', '')
+
+    # --- IMPORTANT: Update this query with your actual table and column names ---
+    # This query should get all the data for the given day.
+    # The filtering for feed/book will be done in Python (pandas) afterwards.
+    sql_query = f"""
+        SELECT FeedName, BookName, InstrumentID, ExclusionReason, Timestamp
+        FROM YourExclusionTableName
+        WHERE ValuationDate = '{date_yyyymmdd}'
+    """
     
-    output_message = run_exclusion_check(
-        conn=conn, 
-        feed=feed, 
-        book=book, 
-        report_date=report_date,
-        is_feed_exact=is_feed_exact,
-        is_book_exact=is_book_exact
-    )
-    return render_template("dashboard.html", exclusion_output=output_message, request_form=request_form_data)
+    output_messages.append(f"Fetching exclusion data for date: {report_date}...")
 
-# --- ROUTES FOR THE RISK FACTOR SUB-TABS ---
+    try:
+        if conn is None:
+            raise Exception("Database connection is not available.")
+        
+        df = pd.read_sql(sql_query, conn)
+        
+        if df.empty:
+            output_messages.append("\nINFO: No exclusion data found for the selected date.")
+            return "\n".join(output_messages)
 
-@app.route("/run_static_info", methods=["POST"])
-def handle_static_info():
-    request_form_data = request.form.to_dict(flat=False)
-    report_date = request.form.get("report_date")
-    id_type = request.form.get("id_type")
-    id_code = request.form.get("id_code")
-    output_message = run_static_info_check(conn, id_type, id_code, report_date)
-    return render_template("dashboard.html", risk_factor_output=output_message, request_form=request_form_data)
+    except Exception as e:
+        output_messages.append(f"\nDATABASE ERROR: {e}")
+        return "\n".join(output_messages)
 
-@app.route("/run_atlas_proxy", methods=["POST"])
-def handle_atlas_proxy():
-    request_form_data = request.form.to_dict(flat=False)
-    report_date = request.form.get("report_date")
-    proxy_type = request.form.get("atlas_rf_type")
-    code = request.form.get("atlas_rf_code")
-    output_message = run_atlas_proxy_check(conn, proxy_type, code, report_date)
-    return render_template("dashboard.html", risk_factor_output=output_message, request_form=request_form_data)
+    # --- DYNAMIC FILTERING LOGIC ---
+    
+    conditions = []
+    
+    # Build the condition for the Feed search
+    if feed:
+        # IMPORTANT: Change 'FeedName' to your actual column name
+        if is_feed_exact:
+            conditions.append(df['FeedName'] == feed)
+            output_messages.append(f"Searching for EXACT Feed: '{feed}'")
+        else:
+            conditions.append(df['FeedName'].str.contains(feed, case=False, na=False))
+            output_messages.append(f"Searching for PARTIAL Feed: '{feed}'")
 
-@app.route("/run_sra_pnl", methods=["POST"])
-def handle_sra_pnl():
-    request_form_data = request.form.to_dict(flat=False)
-    report_date = request.form.get("report_date")
-    id_type = request.form.get("sra_id_type")
-    code = request.form.get("sra_id_code")
-    output_message = run_sra_pnl_check(conn, id_type, code, report_date)
-    return render_template("dashboard.html", risk_factor_output=output_message, request_form=request_form_data)
+    # Build the condition for the Book search
+    if book:
+        # IMPORTANT: Change 'BookName' to your actual column name
+        if is_book_exact:
+            conditions.append(df['BookName'] == book)
+            output_messages.append(f"Searching for EXACT Book: '{book}'")
+        else:
+            conditions.append(df['BookName'].str.contains(book, case=False, na=False))
+            output_messages.append(f"Searching for PARTIAL Book: '{book}'")
+    
+    if not conditions:
+        output_messages.append("\nPlease provide a Feed, a Book, or both to search.")
+        return "\n".join(output_messages)
 
-if __name__ == "__main__":
-    if conn:
-        from waitress import serve
-        print("Server running at http://0.0.0.0:8080")
-        serve(app, host="0.0.0.0", port=8080)
+    # Combine all conditions with a logical AND
+    final_condition = conditions[0]
+    for cond in conditions[1:]:
+        final_condition = final_condition & cond
+        
+    result_df = df[final_condition]
+
+    # --- Display results ---
+    if not result_df.empty:
+        output_messages.append("\n--- Found Results ---")
+        output_messages.append(result_df.to_string(index=False))
     else:
-        print("Could not start server due to database connection failure. Please check your DB_CONNECTION_STRING.")
+        output_messages.append("\n--- No Match Found ---")
 
+    return "\n".join(output_messages)
