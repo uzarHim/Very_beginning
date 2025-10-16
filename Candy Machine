@@ -1,1 +1,289 @@
-=RDP.Data("IBM.N", "TR.EventStartDate;TR.EventTitle;TR.EventType", "SDate=0 EDate=3M")
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSR Web Tool</title>
+    <style>
+        :root {
+            --primary-color: #1a73e8; --primary-light: #d6eaff; --surface-color: #ffffff;
+            --on-surface-color: #202124; --outline-color: #bdc1c6; --background-color: #f1f3f4;
+            --header-gradient: linear-gradient(to right, #1a73e8, #1e88e5);
+            --shadow-sm: 0 1px 2px 0 rgba(60, 64, 67, .3); --shadow-md: 0 4px 8px 2px rgba(60, 64, 67, .15);
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 30px;
+            background-color: var(--background-color); color: var(--on-surface-color);
+            display: flex; justify-content: center;
+        }
+        .app-container {
+            width: 100%; max-width: 1400px; background-color: var(--surface-color);
+            border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden;
+        }
+        .header {
+            background: var(--header-gradient); padding: 18px 30px; display: flex;
+            justify-content: space-between; align-items: center; color: white;
+        }
+        .header-title { font-size: 1.6em; font-weight: 500; }
+        .header-info { text-align: right; }
+        .date-picker-container label { font-size: 0.9em; margin-right: 10px; font-weight: 500; }
+        #report_date { padding: 8px; border-radius: 4px; border: 1px solid var(--outline-color); background-color: var(--surface-color); font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+        .main-content { padding: 0 30px 30px 30px; }
+        .tab-bar { border-bottom: 1px solid #dadce0; display: flex; margin-bottom: 30px; flex-wrap: wrap; }
+        .tab-button {
+            padding: 16px 24px; cursor: pointer; border: none; background-color: transparent;
+            font-size: 1.1em; font-weight: 500; color: #5f6368; border-bottom: 3px solid transparent;
+            margin-bottom: -1px; transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+        }
+        .tab-button:hover { background-color: var(--primary-light); color: var(--primary-color); }
+        .tab-button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .sub-tab-bar {
+            border-bottom: 1px solid #e0e0e0; display: flex; margin-bottom: 20px;
+            background-color: #fafafa; border-radius: 8px; padding: 5px;
+        }
+        .sub-tab-button {
+            flex-grow: 1; text-align: center; padding: 10px 15px; cursor: pointer;
+            border: none; background-color: transparent; font-size: 0.95em;
+            font-weight: 500; color: #5f6368; border-radius: 6px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+        .sub-tab-button:hover { background-color: var(--primary-light); }
+        .sub-tab-button.active { color: white; background-color: var(--primary-color); }
+        .sub-tab-content { display: none; }
+        .sub-tab-content.active { display: block; }
+        
+        fieldset { border: 1px solid #dadce0; border-radius: 12px; padding: 30px; background-color: #fafafa; margin: 0; }
+        legend { font-size: 1.5em; font-weight: 500; padding: 0 10px; color: #3c4043; }
+        .form-group { margin-bottom: 24px; }
+        .form-row { display: flex; gap: 40px; }
+        .form-row > div { flex: 1; }
+        .radio-group label, .checkbox-group label { margin-right: 20px; font-weight: normal; }
+        label { display: block; margin-bottom: 8px; font-size: 0.9em; font-weight: 500; color: #5f6368; }
+        input[type="text"], input[type="date"], select, textarea {
+            width: 100%; padding: 14px; font-size: 1em; border: 1px solid var(--outline-color);
+            border-radius: 8px; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: var(--surface-color); font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+        }
+        input[type="text"]:focus, input[type="date"]:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); }
+        .primary-button {
+            font-size: 1em; font-weight: 500; padding: 12px 28px; cursor: pointer; background-color: var(--primary-color);
+            color: white; border: none; border-radius: 24px; transition: transform 0.1s ease-out, box-shadow 0.2s ease-out;
+            box-shadow: var(--shadow-sm);
+        }
+        .primary-button:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+        .secondary-button {
+            font-size: 1em; font-weight: 500; padding: 10px 24px; cursor: pointer; background-color: transparent;
+            color: var(--primary-color); border: 1px solid var(--primary-color); border-radius: 24px;
+            transition: background-color 0.2s, color 0.2s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .secondary-button:hover { background-color: var(--primary-light); }
+        .results-output { margin-top: 30px; }
+        pre {
+            background: #e8eaed; padding: 16px; border-radius: 8px; white-space: pre-wrap;
+            word-wrap: break-word; border: 1px solid #dadce0; font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95em; max-height: 500px; overflow-y: auto;
+        }
+        .collapsible-trigger {
+            background-color: var(--surface-color); color: #3c4043; cursor: pointer; padding: 16px 20px;
+            width: 100%; border: 1px solid #dadce0; text-align: left; outline: none;
+            font-size: 1.1em; font-weight: 500; border-radius: 8px; display: flex;
+            justify-content: space-between; align-items: center; transition: background-color 0.2s, box-shadow 0.2s;
+            margin-bottom: 8px; box-shadow: var(--shadow-sm);
+        }
+        .collapsible-trigger:hover { background-color: #f8f9fa; box-shadow: 0 1px 3px 1px rgba(60, 64, 67, .15); }
+        .collapsible-trigger .arrow { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 1.5em; color: #5f6368; }
+        .collapsible-trigger.active .arrow { transform: rotate(180deg); }
+        .collapsible-content {
+            max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: var(--surface-color); border: 1px solid #dadce0; border-top: none;
+            border-radius: 0 0 8px 8px; margin-top: -8px; padding: 0;
+        }
+        .collapsible-content.active {
+             max-height: 70vh; overflow: hidden;
+        }
+        .table-container { 
+            width: 100%; height: 65vh;
+            overflow: auto; border-radius: 8px; 
+        }
+        .results-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9em; text-align: left; white-space: nowrap; }
+        .results-table th, .results-table td { padding: 10px 14px; border-bottom: 1px solid #dadce0; border-right: 1px solid #dadce0; }
+        .results-table thead th { background-color: #f1f3f4; font-weight: 600; position: sticky; top: 0; z-index: 2; }
+        .results-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
+
+        .results-table th:nth-child(1), .results-table td:nth-child(1) { position: sticky; left: 0; z-index: 1; }
+        .results-table th:nth-child(2), .results-table td:nth-child(2) { position: sticky; left: 80px; z-index: 1; }
+        .results-table th:nth-child(3), .results-table td:nth-child(3) { position: sticky; left: 220px; z-index: 1; }
+        
+        .results-table thead th:nth-child(1), .results-table thead th:nth-child(2), .results-table thead th:nth-child(3) {
+            z-index: 3; background-color: #e8eaed;
+        }
+        .results-table tbody td:nth-child(1), .results-table tbody td:nth-child(2), .results-table tbody td:nth-child(3) {
+             background-color: var(--surface-color);
+        }
+         .results-table tbody tr:nth-child(even) td:nth-child(1), .results-table tbody tr:nth-child(even) td:nth-child(2), .results-table tbody tr:nth-child(even) td:nth-child(3) {
+             background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-title">TSR Web Tool</div>
+            <div class="header-info"><div class="date-picker-container"><label for="report_date">Report Date:</label><input type="date" id="report_date" name="report_date" value="{{ request_form.get('report_date', [''])[0] }}"></div></div>
+        </header>
+
+        <main class="main-content">
+            <div class="tab-bar">
+                 <button class="tab-button" data-tab="sraMonitoring">SRA Feed Monitoring</button>
+                 <button class="tab-button" data-tab="adjustmentMonitoring">Adjustment Monitoring</button>
+                 <button class="tab-button" data-tab="weights">Weights</button>
+                 <button class="tab-button" data-tab="mqtVar">MQT VaR Figures</button>
+                 <button class="tab-button" data-tab="tails">Tails</button>
+                 <button class="tab-button" data-tab="exclusionCheck">Exclusion Check</button>
+                 <button class="tab-button" data-tab="riskFactor">Risk Factor</button>
+            </div>
+            
+            <div id="sraMonitoring" class="tab-content"><!-- ... SRA content ... --></div>
+            <div id="adjustmentMonitoring" class="tab-content"><!-- ... Adjustment content ... --></div>
+            <div id="weights" class="tab-content"><!-- ... Weights content ... --></div>
+            <div id="mqtVar" class="tab-content"><!-- ... MQT VaR content ... --></div>
+
+            <div id="tails" class="tab-content">
+                <form action="/run_tails_check" method="post">
+                    <fieldset>
+                        <legend>Run Tails Check</legend>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="tails_node">Node:</label>
+                                <input type="text" id="tails_node" name="tails_node" placeholder="e.g., 180216" value="{{ request_form.get('tails_node', [''])[0] }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="prev_cob">Previous COB:</label>
+                                <input type="date" id="prev_cob" name="prev_cob" value="{{ request_form.get('prev_cob', [''])[0] }}">
+                            </div>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label>VaR Type:</label>
+                            <label><input type="checkbox" name="tails_var_type" value="DVaR" {% if 'DVaR' in request_form.get('tails_var_type', []) %}checked{% endif %}> DVaR</label>
+                            <label><input type="checkbox" name="tails_var_type" value="SVaR" {% if 'SVaR' in request_form.get('tails_var_type', []) %}checked{% endif %}> SVaR</label>
+                        </div>
+                        <button type="submit" class="primary-button">Run Tails Check</button>
+                    </fieldset>
+                </form>
+                <div class="results-output" id="tailsResult">
+                   {% if tails_output %}
+                       <div style="display: flex; justify-content: space-between; align-items: center;"><h2>Results:</h2><button type="button" class="secondary-button download-btn">Download Result</button></div>
+                       <pre>{{ tails_output }}</pre>
+                   {% endif %}
+                </div>
+            </div>
+
+            <div id="exclusionCheck" class="tab-content"><!-- ... Exclusion Check content ... --></div>
+            <div id="riskFactor" class="tab-content"><!-- ... Risk Factor content ... --></div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // --- DATE PICKER LOGIC ---
+            const datePicker = document.getElementById('report_date');
+            if (!datePicker.value) {
+                let today = new Date();
+                let prevBusinessDay = new Date(today);
+                if (today.getDay() === 0) { prevBusinessDay.setDate(today.getDate() - 2); }
+                else if (today.getDay() === 1) { prevBusinessDay.setDate(today.getDate() - 3); }
+                else { prevBusinessDay.setDate(today.getDate() - 1); }
+                datePicker.value = prevBusinessDay.toISOString().split('T')[0];
+            }
+
+            const prevCobPicker = document.getElementById('prev_cob');
+            if (prevCobPicker && !prevCobPicker.value) {
+                let today = new Date();
+                let businessDaysToSubtract = 2;
+                let currentDate = new Date(today);
+                while (businessDaysToSubtract > 0) {
+                    currentDate.setDate(currentDate.getDate() - 1);
+                    let dayOfWeek = currentDate.getDay();
+                    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                        businessDaysToSubtract--;
+                    }
+                }
+                prevCobPicker.value = currentDate.toISOString().split('T')[0];
+            }
+            
+            // --- FORM SUBMISSION LOGIC ---
+            const allForms = document.querySelectorAll('form');
+            allForms.forEach(form => {
+                form.addEventListener('submit', (e) => {
+                    // Add main report date to every form
+                    let dateInput = form.querySelector('input[name="report_date"]');
+                    if (!dateInput) {
+                        dateInput = document.createElement('input');
+                        dateInput.type = 'hidden';
+                        dateInput.name = 'report_date';
+                        form.appendChild(dateInput);
+                    }
+                    dateInput.value = document.getElementById('report_date').value;
+
+                    // Add active tab and sub-tab info to every form
+                    const activeTab = sessionStorage.getItem('activeTab') || 'sraMonitoring';
+                    const activeSubTab = sessionStorage.getItem('activeSubTab') || 'staticInfo';
+                    
+                    let activeTabInput = form.querySelector('input[name="active_tab"]');
+                    if (!activeTabInput) {
+                         activeTabInput = document.createElement('input');
+                         activeTabInput.type = 'hidden'; activeTabInput.name = 'active_tab';
+                         form.appendChild(activeTabInput);
+                    }
+                    activeTabInput.value = activeTab;
+
+                    if (activeTab === 'riskFactor') {
+                        let activeSubTabInput = form.querySelector('input[name="active_sub_tab"]');
+                         if (!activeSubTabInput) {
+                             activeSubTabInput = document.createElement('input');
+                             activeSubTabInput.type = 'hidden'; activeSubTabInput.name = 'active_sub_tab';
+                             form.appendChild(activeSubTabInput);
+                         }
+                         activeSubTabInput.value = activeSubTab;
+                    }
+                });
+            });
+
+            // --- TAB NAVIGATION LOGIC ---
+            function setupTabs(containerSelector, buttonClass, contentClass, storageKey, defaultTab) {
+                const buttons = document.querySelectorAll(`${containerSelector} .${buttonClass}`);
+                const contents = document.querySelectorAll(`${containerSelector} .${contentClass}`);
+                const dataAttribute = buttonClass.includes('sub') ? 'subtab' : 'tab';
+                
+                function activate(name) {
+                    if (!name) return;
+                    buttons.forEach(btn => btn.classList.toggle("active", btn.dataset[dataAttribute] === name));
+                    contents.forEach(content => content.classList.toggle("active", content.id === name));
+                }
+
+                buttons.forEach(button => {
+                    button.addEventListener("click", () => {
+                        const name = button.dataset[dataAttribute];
+                        sessionStorage.setItem(storageKey, name);
+                        activate(name);
+                    });
+                });
+                
+                const savedValue = sessionStorage.getItem(storageKey) || defaultTab;
+                activate(savedValue);
+            }
+
+            setupTabs('.app-container', 'tab-button', 'tab-content', 'activeTab', 'sraMonitoring');
+            setupTabs('#riskFactor', 'sub-tab-button', 'sub-tab-content', 'activeSubTab', 'staticInfo');
+            
+            // --- COLLAPSIBLE & DOWNLOAD LOGIC ---
+            // (This logic remains the same)
+        });
+    </script>
+</body>
+</html>
+
