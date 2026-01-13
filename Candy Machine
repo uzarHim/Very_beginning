@@ -15,3 +15,10 @@
 </table>
 
 <p>Thank you.</p>
+
+Filter(
+    QuarterlyTrainingTracker,
+    'Employee Name'.Email = User().Email || 
+    'Manager''s Name'.Email = User().Email ||
+    'Director Name'.Email = User().Email
+)
